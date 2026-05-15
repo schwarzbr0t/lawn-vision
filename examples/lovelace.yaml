@@ -1,0 +1,42 @@
+type: custom:lawn-vision-card
+title: Lawn Vision
+background_image: /local/community/lawn-vision/rasen.png
+background_position: center
+background_size: cover
+layout: auto
+size: normal
+show_agro: true
+show_forecast: true
+show_timeline: true
+show_recommendation: true
+visual:
+  density: normal
+  accent_color: "#42d65d"
+  water_color: "#46a2ff"
+  warning_color: "#f4b72f"
+  card_radius: 16
+  section_radius: 12
+  overlay_opacity: 0.78
+  vignette_opacity: 0.16
+  panel_opacity: 0.76
+  blur: 16
+  text_scale: 1
+  min_height: 0
+entity_phase: sensor.lawn_vision_phase
+entity_growth: sensor.lawn_vision_growth_score
+entity_soil_temperature: sensor.lawn_vision_soil_temperature
+entity_mean_daily_temperature: sensor.lawn_vision_mean_daily_temperature
+entity_grassland_temperature_sum: sensor.lawn_vision_grassland_temperature_sum
+entity_growing_degree_days: sensor.lawn_vision_growing_degree_days
+entity_moisture_10cm: sensor.lawn_vision_moisture_10cm
+entity_moisture_20cm: sensor.lawn_vision_moisture_20cm
+entity_moisture_30cm: sensor.lawn_vision_moisture_30cm
+entity_mowing: sensor.lawn_vision_mowing_condition
+entity_water: sensor.lawn_vision_water_need
+entity_stress: sensor.lawn_vision_stress_level
+entity_recommendation: sensor.lawn_vision_recommendation
+entity_forecast_rain_risk: sensor.lawn_vision_forecast_rain_risk
+entity_forecast_water_need: sensor.lawn_vision_forecast_water_need
+entity_forecast_growth_trend: sensor.lawn_vision_forecast_growth_trend
+entity_forecast_best_window: sensor.lawn_vision_forecast_best_window
+entity_forecast_care_hint: sensor.lawn_vision_forecast_care_hint

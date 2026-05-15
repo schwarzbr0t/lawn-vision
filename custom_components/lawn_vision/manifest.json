@@ -1,0 +1,12 @@
+{
+  "domain": "lawn_vision",
+  "name": "Lawn Vision",
+  "codeowners": ["@schwarzbr0t"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/schwarzbr0t/lawn-vision",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/schwarzbr0t/lawn-vision/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

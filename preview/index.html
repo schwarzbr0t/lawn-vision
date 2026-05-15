@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lawn Vision Preview</title>
+    <style>
+      :root {
+        --ha-card-background: #151c24;
+        --card-background-color: #151c24;
+        --primary-text-color: #f8fafc;
+        --secondary-text-color: #98a6b5;
+        --secondary-background-color: #202b36;
+        --divider-color: #334155;
+        --state-icon-color: #35b86b;
+        --ha-card-border-radius: 14px;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(circle at 50% 0, rgba(70, 139, 85, .18), transparent 34%),
+          #07111a;
+        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      main {
+        width: min(1060px, calc(100vw - 32px));
+      }
+
+      ha-card {
+        display: block;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, .34);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <lawn-vision-card id="card"></lawn-vision-card>
+    </main>
+
+    <script>
+      customElements.define(
+        "ha-card",
+        class extends HTMLElement {
+          connectedCallback() {
+            this.style.display = "block";
+          }
+        }
+      );
+
+      customElements.define(
+        "ha-icon",
+        class extends HTMLElement {
+          static get observedAttributes() {
+            return ["icon"];
+          }
+
+          connectedCallback() {
+            this.render();
+          }
+
+          attributeChangedCallback() {
+            this.render();
+          }
+
+          render() {
+            this.innerHTML = iconSvg(this.getAttribute("icon") || "");
+          }
+        }
+      );
+
+      function iconSvg(icon) {
+        const paths = {
+          "mdi:check": "M5 13l4 4L19 7",
+          "mdi:leaf": "M5 20c0-8 5-14 14-16 0 8-5 14-14 16Zm4-4c2-4 5-7 9-9",
+          "mdi:water-outline": "M12 3s7 7.4 7 12a7 7 0 0 1-14 0c0-4.6 7-12 7-12Z",
+          "mdi:shield-outline": "M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3Z",
+          "mdi:thermometer-lines": "M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0ZM16 5h4M16 9h4M16 13h4",
+          "mdi:thermometer-auto": "M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0ZM18 6l1 2 2 .3-1.5 1.4.4 2.1L18 10.8l-1.9 1 .4-2.1L15 8.3l2-.3 1-2Z",
+          "mdi:sigma": "M18 5H7l6 7-6 7h11",
+          "mdi:chart-bell-curve-cumulative": "M4 19h16M5 17c4 0 4-10 8-10s4 10 8 10M5 17c6 0 8-4 16-4",
+          "mdi:sprout": "M12 21c-1.6-3.7-.8-7.3 2.5-10.8-3.8.1-6.7 2.1-8.5 5.8 2.7-.2 4.7.5 6 2.1 1.1-4.8 3.8-8.3 8-10.6-4.8-1.5-9-.8-12.5 2.1C4 12.5 3.2 16.3 5.2 21H12Z",
+          "mdi:grass": "M4 21c0-5 1.4-9.4 4.2-13.2C8 12.9 8.3 17.3 9.1 21H4Zm6 0c.1-6.3 2-11.7 5.7-16.3-.5 6.1-.2 11.5.9 16.3H10Zm7 0c-.4-4.7.3-8.8 2.1-12.5.1 4.6.7 8.8 1.9 12.5H17Z",
+          "mdi:water-percent": "M7 17a5 5 0 0 0 10 0c0-3.8-5-9.5-5-9.5S7 13.2 7 17Zm2.5-8.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm5 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM7 19 17 5",
+          "mdi:content-cut": "M9 7a3 3 0 1 1-1.3 2.5L12 12l-4.3 2.5A3 3 0 1 1 9 17l10-5L9 7Z",
+          "mdi:alert-decagram-outline": "M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3Zm0 5v7m0 3h.01",
+          "mdi:clipboard-text-outline": "M8 4h8v2h3v15H5V6h3V4Zm1 6h6M9 14h6M9 18h4",
+          "mdi:shield-leaf-outline": "M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3Zm-1 14c-.4-3.1.9-5.5 3.8-7.2-3.1-.3-5.3 1-6.8 3.7 1.6-.1 2.7.4 3.2 1.5.7-2.2 2-3.9 4.1-5.1",
+          "mdi:seed-outline": "M12 21c-2-4.5-.9-8.6 3.2-12.2C10.7 9 7.5 11.2 5.5 15.5 8.2 15.1 10.4 16.9 12 21Z",
+          "mdi:snowflake": "M12 2v20M4.2 6.2l15.6 11.6M19.8 6.2 4.2 17.8",
+          "mdi:weather-sunny-alert": "M12 5a5 5 0 0 1 5 5 5 5 0 0 1-6.3 4.8M12 1v2m0 14v2M3 10H1m22 0h-2M5.6 3.6 4.2 4.2M18.4 3.6l-1.6 1.6M6 21h5l-2.5-5L6 21Z",
+        };
+
+        const path = paths[icon] || paths["mdi:grass"];
+        return `<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg>`;
+      }
+    </script>
+    <script src="../dist/lawn-vision.js"></script>
+    <script>
+      const card = document.getElementById("card");
+      card.setConfig({
+        title: "Lawn Vision",
+        background_image: "../docs/rasen.png",
+        background_position: "center",
+        entity_phase: "sensor.lawn_vision_phase",
+        entity_growth: "sensor.lawn_vision_growth_score",
+        entity_soil_temperature: "sensor.lawn_vision_soil_temperature",
+        entity_mean_daily_temperature: "sensor.lawn_vision_mean_daily_temperature",
+        entity_grassland_temperature_sum: "sensor.lawn_vision_grassland_temperature_sum",
+        entity_growing_degree_days: "sensor.lawn_vision_growing_degree_days",
+        entity_moisture_10cm: "sensor.lawn_vision_moisture_10cm",
+        entity_moisture_20cm: "sensor.lawn_vision_moisture_20cm",
+        entity_moisture_30cm: "sensor.lawn_vision_moisture_30cm",
+        entity_mowing: "sensor.lawn_vision_mowing_condition",
+        entity_water: "sensor.lawn_vision_water_need",
+        entity_stress: "sensor.lawn_vision_stress_level",
+        entity_recommendation: "sensor.lawn_vision_recommendation",
+      });
+      card.hass = {
+        states: {
+          "sensor.lawn_vision_phase": { state: "active_growth" },
+          "sensor.lawn_vision_growth_score": { state: "82" },
+          "sensor.lawn_vision_soil_temperature": { state: "14.8" },
+          "sensor.lawn_vision_mean_daily_temperature": { state: "16.4" },
+          "sensor.lawn_vision_grassland_temperature_sum": { state: "286.5" },
+          "sensor.lawn_vision_growing_degree_days": { state: "11.4" },
+          "sensor.lawn_vision_moisture_10cm": { state: "0.318" },
+          "sensor.lawn_vision_moisture_20cm": { state: "0.287" },
+          "sensor.lawn_vision_moisture_30cm": { state: "0.251" },
+          "sensor.lawn_vision_mowing_condition": { state: "76" },
+          "sensor.lawn_vision_water_need": { state: "2.4" },
+          "sensor.lawn_vision_stress_level": { state: "18" },
+          "sensor.lawn_vision_recommendation": {
+            state: "Gutes Maehfenster. Nicht mehr als ein Drittel der Halmlaenge entfernen.",
+          },
+        },
+      };
+    </script>
+  </body>
+</html>

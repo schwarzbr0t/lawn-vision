@@ -1,0 +1,117 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Lawn Vision",
+        "description": "Create a local lawn advisor from existing Home Assistant weather and garden entities.",
+        "data": {
+          "name": "Name",
+          "weather_entity": "Weather entity",
+          "temperature_entity": "Temperature sensor",
+          "mean_daily_temperature_entity": "Mean daily temperature",
+          "soil_temperature_entity": "Soil temperature",
+          "humidity_entity": "Humidity sensor",
+          "moisture_entity": "Soil moisture sensor",
+          "moisture_10cm_entity": "Soil moisture 10 cm",
+          "moisture_20cm_entity": "Soil moisture 20 cm",
+          "moisture_30cm_entity": "Soil moisture 30 cm",
+          "rain_entity": "Rain sensor",
+          "grassland_temperature_sum_entity": "Grassland temperature sum",
+          "gdd_entity": "Growing Degree Days",
+          "area_m2": "Lawn area in m2",
+          "grass_type": "Grass type"
+        }
+      }
+    },
+    "selector": {
+      "grass_type": {
+        "options": {
+          "cool_season": "Cool-season lawn",
+          "warm_season": "Warm-season lawn"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Lawn Vision options",
+        "data": {
+          "name": "Name",
+          "weather_entity": "Weather entity",
+          "temperature_entity": "Temperature sensor",
+          "mean_daily_temperature_entity": "Mean daily temperature",
+          "soil_temperature_entity": "Soil temperature",
+          "humidity_entity": "Humidity sensor",
+          "moisture_entity": "Soil moisture sensor",
+          "moisture_10cm_entity": "Soil moisture 10 cm",
+          "moisture_20cm_entity": "Soil moisture 20 cm",
+          "moisture_30cm_entity": "Soil moisture 30 cm",
+          "rain_entity": "Rain sensor",
+          "grassland_temperature_sum_entity": "Grassland temperature sum",
+          "gdd_entity": "Growing Degree Days",
+          "area_m2": "Lawn area in m2",
+          "grass_type": "Grass type"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "phase": {
+        "name": "Phase"
+      },
+      "growth_score": {
+        "name": "Growth score"
+      },
+      "soil_temperature": {
+        "name": "Soil temperature"
+      },
+      "mean_daily_temperature": {
+        "name": "Mean daily temperature"
+      },
+      "grassland_temperature_sum": {
+        "name": "Grassland temperature sum"
+      },
+      "growing_degree_days": {
+        "name": "Growing Degree Days"
+      },
+      "moisture_10cm": {
+        "name": "Soil moisture 10 cm"
+      },
+      "moisture_20cm": {
+        "name": "Soil moisture 20 cm"
+      },
+      "moisture_30cm": {
+        "name": "Soil moisture 30 cm"
+      },
+      "mowing_condition": {
+        "name": "Mowing condition"
+      },
+      "water_need": {
+        "name": "Water need"
+      },
+      "stress_level": {
+        "name": "Stress level"
+      },
+      "recommendation": {
+        "name": "Recommendation"
+      },
+      "forecast_rain_risk": {
+        "name": "Forecast rain risk"
+      },
+      "forecast_water_need": {
+        "name": "Forecast water need"
+      },
+      "forecast_growth_trend": {
+        "name": "Forecast growth trend"
+      },
+      "forecast_best_window": {
+        "name": "Forecast care window"
+      },
+      "forecast_care_hint": {
+        "name": "Forecast care hint"
+      }
+    }
+  }
+}
