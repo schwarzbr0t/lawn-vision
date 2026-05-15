@@ -38,6 +38,21 @@ The integration creates these sensors:
 - `sensor.lawn_vision_forecast_best_window`
 - `sensor.lawn_vision_forecast_care_hint`
 
+Care guide sensors (each exposes a state plus `reason`, `next_window`,
+`days_since`, `cooldown_days` attributes):
+
+- `sensor.lawn_vision_action_mow`
+- `sensor.lawn_vision_action_water`
+- `sensor.lawn_vision_action_fertilize`
+- `sensor.lawn_vision_action_scarify`
+- `sensor.lawn_vision_action_aerate`
+- `sensor.lawn_vision_action_overseed`
+- `sensor.lawn_vision_next_action` – headline action for today
+
+Action states are `do_now`, `soon`, `wait`, `skip`, `off_season`. The
+`next_action` sensor returns the recommended action id (`mow`, `water`,
+`fertilize`, `scarify`, `aerate`, `overseed`, or `none`).
+
 ## Inputs
 
 Required:
@@ -56,6 +71,18 @@ Optional but recommended:
 - Rain sensor
 - Lawn area
 - Grass type: cool-season or warm-season lawn
+
+For the care guide, optional `input_datetime` helpers tracking the last
+time each task was performed. Without them the integration still works,
+but annual tasks (scarify, aerate, overseed) are capped at `soon` on
+fresh installs:
+
+- Last mow
+- Last watering
+- Last fertilize
+- Last scarify
+- Last aerate
+- Last overseed
 
 ## Manual installation for development
 

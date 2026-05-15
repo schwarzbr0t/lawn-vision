@@ -19,7 +19,13 @@
           "grassland_temperature_sum_entity": "Gruenlandtemperatursumme",
           "gdd_entity": "Growing Degree Days",
           "area_m2": "Rasenflaeche in m2",
-          "grass_type": "Rasentyp"
+          "grass_type": "Rasentyp",
+          "last_mow_entity": "Letztes Maehen (input_datetime)",
+          "last_water_entity": "Letztes Bewaessern (input_datetime)",
+          "last_fertilize_entity": "Letzte Duengung (input_datetime)",
+          "last_scarify_entity": "Letztes Vertikutieren (input_datetime)",
+          "last_aerate_entity": "Letztes Aerifizieren (input_datetime)",
+          "last_overseed_entity": "Letzte Nachsaat (input_datetime)"
         }
       }
     },
@@ -51,7 +57,13 @@
           "grassland_temperature_sum_entity": "Gruenlandtemperatursumme",
           "gdd_entity": "Growing Degree Days",
           "area_m2": "Rasenflaeche in m2",
-          "grass_type": "Rasentyp"
+          "grass_type": "Rasentyp",
+          "last_mow_entity": "Letztes Maehen (input_datetime)",
+          "last_water_entity": "Letztes Bewaessern (input_datetime)",
+          "last_fertilize_entity": "Letzte Duengung (input_datetime)",
+          "last_scarify_entity": "Letztes Vertikutieren (input_datetime)",
+          "last_aerate_entity": "Letztes Aerifizieren (input_datetime)",
+          "last_overseed_entity": "Letzte Nachsaat (input_datetime)"
         }
       }
     }
@@ -111,6 +123,78 @@
       },
       "forecast_care_hint": {
         "name": "Prognose Pflegehinweis"
+      },
+      "action_mow": {
+        "name": "Pflege: Maehen",
+        "state": {
+          "do_now": "Jetzt",
+          "soon": "Bald",
+          "wait": "Warten",
+          "skip": "Nicht empfohlen",
+          "off_season": "Ausserhalb Saison"
+        }
+      },
+      "action_water": {
+        "name": "Pflege: Bewaessern",
+        "state": {
+          "do_now": "Jetzt",
+          "soon": "Bald",
+          "wait": "Warten",
+          "skip": "Nicht empfohlen",
+          "off_season": "Ausserhalb Saison"
+        }
+      },
+      "action_fertilize": {
+        "name": "Pflege: Duengen",
+        "state": {
+          "do_now": "Jetzt",
+          "soon": "Bald",
+          "wait": "Warten",
+          "skip": "Nicht empfohlen",
+          "off_season": "Ausserhalb Saison"
+        }
+      },
+      "action_scarify": {
+        "name": "Pflege: Vertikutieren",
+        "state": {
+          "do_now": "Jetzt",
+          "soon": "Bald",
+          "wait": "Warten",
+          "skip": "Nicht empfohlen",
+          "off_season": "Ausserhalb Saison"
+        }
+      },
+      "action_aerate": {
+        "name": "Pflege: Aerifizieren",
+        "state": {
+          "do_now": "Jetzt",
+          "soon": "Bald",
+          "wait": "Warten",
+          "skip": "Nicht empfohlen",
+          "off_season": "Ausserhalb Saison"
+        }
+      },
+      "action_overseed": {
+        "name": "Pflege: Nachsaat",
+        "state": {
+          "do_now": "Jetzt",
+          "soon": "Bald",
+          "wait": "Warten",
+          "skip": "Nicht empfohlen",
+          "off_season": "Ausserhalb Saison"
+        }
+      },
+      "next_action": {
+        "name": "Naechste Pflegeaktion",
+        "state": {
+          "mow": "Maehen",
+          "water": "Bewaessern",
+          "fertilize": "Duengen",
+          "scarify": "Vertikutieren",
+          "aerate": "Aerifizieren",
+          "overseed": "Nachsaat",
+          "none": "Beobachten"
+        }
       }
     }
   }

@@ -21,6 +21,12 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     DOMAIN,
+    SENSOR_ACTION_AERATE,
+    SENSOR_ACTION_FERTILIZE,
+    SENSOR_ACTION_MOW,
+    SENSOR_ACTION_OVERSEED,
+    SENSOR_ACTION_SCARIFY,
+    SENSOR_ACTION_WATER,
     SENSOR_FORECAST_BEST_WINDOW,
     SENSOR_FORECAST_CARE_HINT,
     SENSOR_FORECAST_GROWTH_TREND,
@@ -34,6 +40,7 @@ from .const import (
     SENSOR_MOISTURE_10CM,
     SENSOR_MOISTURE_20CM,
     SENSOR_MOISTURE_30CM,
+    SENSOR_NEXT_ACTION,
     SENSOR_PHASE,
     SENSOR_RECOMMENDATION,
     SENSOR_SOIL_TEMPERATURE,
@@ -49,6 +56,38 @@ class LawnVisionSensorDescription(SensorEntityDescription):
 
     value_fn: Callable[[dict[str, Any]], Any]
     extra_fn: Callable[[dict[str, Any]], dict[str, Any]] | None = None
+
+
+def _action_state(key: str) -> Callable[[dict[str, Any]], Any]:
+    def _value(data: dict[str, Any]) -> Any:
+        info = data.get(key)
+        return info.get("state") if isinstance(info, dict) else None
+
+    return _value
+
+
+def _action_extras(key: str) -> Callable[[dict[str, Any]], dict[str, Any]]:
+    def _value(data: dict[str, Any]) -> dict[str, Any]:
+        info = data.get(key)
+        if not isinstance(info, dict):
+            return {}
+        return {k: v for k, v in info.items() if k != "state"}
+
+    return _value
+
+
+def _next_action_extras(data: dict[str, Any]) -> dict[str, Any]:
+    action_id = data.get(SENSOR_NEXT_ACTION)
+    if not action_id or action_id == "none":
+        return {}
+    info = data.get("actions", {}).get(action_id, {})
+    return {
+        "action": action_id,
+        "next_window": info.get("next_window"),
+        "reason": info.get("reason"),
+        "days_since": info.get("days_since"),
+        "cooldown_days": info.get("cooldown_days"),
+    }
 
 
 SENSORS: tuple[LawnVisionSensorDescription, ...] = (
@@ -188,6 +227,55 @@ SENSORS: tuple[LawnVisionSensorDescription, ...] = (
         translation_key=SENSOR_FORECAST_CARE_HINT,
         icon="mdi:calendar-check-outline",
         value_fn=lambda data: data.get(SENSOR_FORECAST_CARE_HINT),
+    ),
+    LawnVisionSensorDescription(
+        key=SENSOR_ACTION_MOW,
+        translation_key=SENSOR_ACTION_MOW,
+        icon="mdi:robot-mower",
+        value_fn=_action_state(SENSOR_ACTION_MOW),
+        extra_fn=_action_extras(SENSOR_ACTION_MOW),
+    ),
+    LawnVisionSensorDescription(
+        key=SENSOR_ACTION_WATER,
+        translation_key=SENSOR_ACTION_WATER,
+        icon="mdi:watering-can-outline",
+        value_fn=_action_state(SENSOR_ACTION_WATER),
+        extra_fn=_action_extras(SENSOR_ACTION_WATER),
+    ),
+    LawnVisionSensorDescription(
+        key=SENSOR_ACTION_FERTILIZE,
+        translation_key=SENSOR_ACTION_FERTILIZE,
+        icon="mdi:bottle-tonic-outline",
+        value_fn=_action_state(SENSOR_ACTION_FERTILIZE),
+        extra_fn=_action_extras(SENSOR_ACTION_FERTILIZE),
+    ),
+    LawnVisionSensorDescription(
+        key=SENSOR_ACTION_SCARIFY,
+        translation_key=SENSOR_ACTION_SCARIFY,
+        icon="mdi:rake",
+        value_fn=_action_state(SENSOR_ACTION_SCARIFY),
+        extra_fn=_action_extras(SENSOR_ACTION_SCARIFY),
+    ),
+    LawnVisionSensorDescription(
+        key=SENSOR_ACTION_AERATE,
+        translation_key=SENSOR_ACTION_AERATE,
+        icon="mdi:dots-grid",
+        value_fn=_action_state(SENSOR_ACTION_AERATE),
+        extra_fn=_action_extras(SENSOR_ACTION_AERATE),
+    ),
+    LawnVisionSensorDescription(
+        key=SENSOR_ACTION_OVERSEED,
+        translation_key=SENSOR_ACTION_OVERSEED,
+        icon="mdi:seed-outline",
+        value_fn=_action_state(SENSOR_ACTION_OVERSEED),
+        extra_fn=_action_extras(SENSOR_ACTION_OVERSEED),
+    ),
+    LawnVisionSensorDescription(
+        key=SENSOR_NEXT_ACTION,
+        translation_key=SENSOR_NEXT_ACTION,
+        icon="mdi:lightbulb-on-outline",
+        value_fn=lambda data: data.get(SENSOR_NEXT_ACTION),
+        extra_fn=_next_action_extras,
     ),
 )
 

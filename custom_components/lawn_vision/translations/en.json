@@ -19,7 +19,13 @@
           "grassland_temperature_sum_entity": "Grassland temperature sum",
           "gdd_entity": "Growing Degree Days",
           "area_m2": "Lawn area in m2",
-          "grass_type": "Grass type"
+          "grass_type": "Grass type",
+          "last_mow_entity": "Last mow (input_datetime)",
+          "last_water_entity": "Last watering (input_datetime)",
+          "last_fertilize_entity": "Last fertilize (input_datetime)",
+          "last_scarify_entity": "Last scarify (input_datetime)",
+          "last_aerate_entity": "Last aerate (input_datetime)",
+          "last_overseed_entity": "Last overseed (input_datetime)"
         }
       }
     },
@@ -51,7 +57,13 @@
           "grassland_temperature_sum_entity": "Grassland temperature sum",
           "gdd_entity": "Growing Degree Days",
           "area_m2": "Lawn area in m2",
-          "grass_type": "Grass type"
+          "grass_type": "Grass type",
+          "last_mow_entity": "Last mow (input_datetime)",
+          "last_water_entity": "Last watering (input_datetime)",
+          "last_fertilize_entity": "Last fertilize (input_datetime)",
+          "last_scarify_entity": "Last scarify (input_datetime)",
+          "last_aerate_entity": "Last aerate (input_datetime)",
+          "last_overseed_entity": "Last overseed (input_datetime)"
         }
       }
     }
@@ -111,6 +123,78 @@
       },
       "forecast_care_hint": {
         "name": "Forecast care hint"
+      },
+      "action_mow": {
+        "name": "Care: Mow",
+        "state": {
+          "do_now": "Now",
+          "soon": "Soon",
+          "wait": "Wait",
+          "skip": "Not recommended",
+          "off_season": "Off season"
+        }
+      },
+      "action_water": {
+        "name": "Care: Water",
+        "state": {
+          "do_now": "Now",
+          "soon": "Soon",
+          "wait": "Wait",
+          "skip": "Not recommended",
+          "off_season": "Off season"
+        }
+      },
+      "action_fertilize": {
+        "name": "Care: Fertilize",
+        "state": {
+          "do_now": "Now",
+          "soon": "Soon",
+          "wait": "Wait",
+          "skip": "Not recommended",
+          "off_season": "Off season"
+        }
+      },
+      "action_scarify": {
+        "name": "Care: Scarify",
+        "state": {
+          "do_now": "Now",
+          "soon": "Soon",
+          "wait": "Wait",
+          "skip": "Not recommended",
+          "off_season": "Off season"
+        }
+      },
+      "action_aerate": {
+        "name": "Care: Aerate",
+        "state": {
+          "do_now": "Now",
+          "soon": "Soon",
+          "wait": "Wait",
+          "skip": "Not recommended",
+          "off_season": "Off season"
+        }
+      },
+      "action_overseed": {
+        "name": "Care: Overseed",
+        "state": {
+          "do_now": "Now",
+          "soon": "Soon",
+          "wait": "Wait",
+          "skip": "Not recommended",
+          "off_season": "Off season"
+        }
+      },
+      "next_action": {
+        "name": "Next care action",
+        "state": {
+          "mow": "Mow",
+          "water": "Water",
+          "fertilize": "Fertilize",
+          "scarify": "Scarify",
+          "aerate": "Aerate",
+          "overseed": "Overseed",
+          "none": "Observe"
+        }
       }
     }
   }

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 from math import exp
 from typing import Any
@@ -13,8 +13,23 @@ from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt as dt_util
 
 from .const import (
+    ACTION_AERATE,
+    ACTION_FERTILIZE,
+    ACTION_LAST_DONE_KEYS,
+    ACTION_MOW,
+    ACTION_OVERSEED,
+    ACTION_SCARIFY,
+    ACTION_SENSOR_KEYS,
+    ACTION_STATE_DO_NOW,
+    ACTION_STATE_OFF_SEASON,
+    ACTION_STATE_SKIP,
+    ACTION_STATE_SOON,
+    ACTION_STATE_WAIT,
+    ACTION_WATER,
+    CARE_ACTIONS,
     CONF_AREA_M2,
     CONF_GDD_ENTITY,
     CONF_GRASS_TYPE,
@@ -48,6 +63,7 @@ from .const import (
     SENSOR_MOISTURE_10CM,
     SENSOR_MOISTURE_20CM,
     SENSOR_MOISTURE_30CM,
+    SENSOR_NEXT_ACTION,
     SENSOR_PHASE,
     SENSOR_RECOMMENDATION,
     SENSOR_SOIL_TEMPERATURE,
@@ -138,7 +154,11 @@ class LawnVisionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
 
         forecast = await self._async_get_forecast(config.get(CONF_WEATHER_ENTITY))
-        metrics = calculate_metrics(inputs, forecast)
+        last_done = {
+            action: self._state_string(config.get(ACTION_LAST_DONE_KEYS[action]))
+            for action in CARE_ACTIONS
+        }
+        metrics = calculate_metrics(inputs, forecast, last_done, dt_util.now())
         metrics["inputs"] = {
             "temperature_c": inputs.temperature_c,
             "mean_daily_temperature_c": inputs.mean_daily_temperature_c,
@@ -163,6 +183,15 @@ class LawnVisionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if not entity_id:
             return None
         return self.hass.states.get(entity_id)
+
+    def _state_string(self, entity_id: str | None) -> str | None:
+        """Return the raw state string of an entity, or None when unavailable."""
+        state = self._state(entity_id)
+        if state is None:
+            return None
+        if state.state in (None, "unknown", "unavailable", ""):
+            return None
+        return state.state
 
     def _number_from_entity(
         self, entity_id: str | None, fallback: Any | None = None
@@ -226,7 +255,10 @@ class LawnVisionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
 
 def calculate_metrics(
-    inputs: LawnInputs, forecast: dict[str, list[dict[str, Any]]] | None = None
+    inputs: LawnInputs,
+    forecast: dict[str, list[dict[str, Any]]] | None = None,
+    last_done: dict[str, str | None] | None = None,
+    now: datetime | None = None,
 ) -> dict[str, Any]:
     """Calculate lawn health and care recommendations."""
     temp = inputs.temperature_c
@@ -251,12 +283,29 @@ def calculate_metrics(
     water_need = _water_need_mm(temp, moisture, rain, humidity)
     phase = _phase(growth, stress, growth_temp, moisture)
     recommendation = _recommendation(phase, growth, mowing, water_need, stress)
+    forecast_payload = forecast or {"hourly": [], "daily": []}
     forecast_metrics = _forecast_metrics(
-        forecast or {"hourly": [], "daily": []}, inputs, mowing, stress, water_need
+        forecast_payload, inputs, mowing, stress, water_need
     )
     growing_degree_days = inputs.growing_degree_days
     if growing_degree_days is None:
         growing_degree_days = _growing_degree_days(mean_daily_temp, inputs.grass_type)
+
+    actions = _care_actions(
+        inputs=inputs,
+        forecast=forecast_payload,
+        last_done=last_done or {},
+        now=now or dt_util.now(),
+        growth=growth,
+        mowing=mowing,
+        stress=stress,
+        phase=phase,
+        water_need=water_need,
+        moisture=moisture,
+        soil_temp=growth_temp,
+        rain_risk_24h=forecast_metrics.get(SENSOR_FORECAST_RAIN_RISK) or 0,
+    )
+    next_action = _next_action(actions)
 
     return {
         SENSOR_PHASE: phase,
@@ -274,6 +323,9 @@ def calculate_metrics(
         SENSOR_WATER_NEED: round(water_need, 1),
         SENSOR_STRESS_LEVEL: stress,
         SENSOR_RECOMMENDATION: recommendation,
+        SENSOR_NEXT_ACTION: next_action,
+        "actions": actions,
+        **{ACTION_SENSOR_KEYS[action]: actions[action] for action in CARE_ACTIONS},
         **forecast_metrics,
     }
 
@@ -584,3 +636,447 @@ def _round_or_none(value: float | None, digits: int) -> float | None:
     if value is None:
         return None
     return round(value, digits)
+
+
+SEASONAL_WINDOWS_COOL: dict[str, tuple[tuple[int, int], ...]] = {
+    ACTION_FERTILIZE: ((3, 9),),
+    ACTION_SCARIFY: ((4, 5), (9, 9)),
+    ACTION_AERATE: ((4, 5), (9, 10)),
+    ACTION_OVERSEED: ((4, 5), (8, 9)),
+}
+SEASONAL_WINDOWS_WARM: dict[str, tuple[tuple[int, int], ...]] = {
+    ACTION_FERTILIZE: ((4, 10),),
+    ACTION_SCARIFY: ((5, 6),),
+    ACTION_AERATE: ((5, 6),),
+    ACTION_OVERSEED: ((5, 6),),
+}
+
+ACTION_COOLDOWN_DAYS: dict[str, int] = {
+    ACTION_MOW: 7,
+    ACTION_WATER: 3,
+    ACTION_FERTILIZE: 42,
+    ACTION_SCARIFY: 180,
+    ACTION_AERATE: 300,
+    ACTION_OVERSEED: 60,
+}
+
+NEXT_ACTION_PRIORITY: tuple[str, ...] = (
+    ACTION_WATER,
+    ACTION_MOW,
+    ACTION_FERTILIZE,
+    ACTION_OVERSEED,
+    ACTION_SCARIFY,
+    ACTION_AERATE,
+)
+
+MONTH_NAMES_DE: tuple[str, ...] = (
+    "Januar",
+    "Februar",
+    "Maerz",
+    "April",
+    "Mai",
+    "Juni",
+    "Juli",
+    "August",
+    "September",
+    "Oktober",
+    "November",
+    "Dezember",
+)
+
+
+def _care_actions(
+    *,
+    inputs: LawnInputs,
+    forecast: dict[str, list[dict[str, Any]]],
+    last_done: dict[str, str | None],
+    now: datetime,
+    growth: float,
+    mowing: float,
+    stress: float,
+    phase: str,
+    water_need: float,
+    moisture: float | None,
+    soil_temp: float | None,
+    rain_risk_24h: float,
+) -> dict[str, dict[str, Any]]:
+    """Compute per-action care recommendations."""
+    hourly = forecast.get("hourly") or []
+    daily = forecast.get("daily") or []
+    rain_24h_mm = sum(
+        _forecast_number(item, "precipitation", 0) or 0
+        for item in (hourly[:24] or daily[:1])
+    )
+    rain_48h_mm = sum(
+        _forecast_number(item, "precipitation", 0) or 0
+        for item in (hourly[:48] or daily[:2])
+    )
+    month = now.month
+    windows = (
+        SEASONAL_WINDOWS_WARM
+        if inputs.grass_type == GRASS_WARM_SEASON
+        else SEASONAL_WINDOWS_COOL
+    )
+
+    days = {
+        action: _days_since_state(last_done.get(action), now) for action in CARE_ACTIONS
+    }
+
+    actions = {
+        ACTION_MOW: _action_mow(
+            growth, mowing, stress, phase, rain_risk_24h, rain_24h_mm,
+            days[ACTION_MOW], hourly,
+        ),
+        ACTION_WATER: _action_water(
+            water_need, phase, rain_48h_mm, rain_risk_24h, days[ACTION_WATER],
+        ),
+        ACTION_FERTILIZE: _action_fertilize(
+            phase, soil_temp, stress, month, windows, days[ACTION_FERTILIZE],
+        ),
+        ACTION_SCARIFY: _action_scarify(
+            growth, soil_temp, phase, stress, month, windows, rain_24h_mm,
+            rain_risk_24h, days[ACTION_SCARIFY],
+        ),
+        ACTION_AERATE: _action_aerate(
+            moisture, soil_temp, phase, month, windows, days[ACTION_AERATE],
+        ),
+        ACTION_OVERSEED: _action_overseed(
+            soil_temp, stress, month, windows, daily, days[ACTION_OVERSEED],
+        ),
+    }
+    return _resolve_conflicts(actions, last_done)
+
+
+ANNUAL_ACTIONS: tuple[str, ...] = (ACTION_SCARIFY, ACTION_AERATE, ACTION_OVERSEED)
+
+
+def _resolve_conflicts(
+    actions: dict[str, dict[str, Any]], last_done: dict[str, str | None]
+) -> dict[str, dict[str, Any]]:
+    """Apply pragmatic sequencing rules so the user does not see five 'do now' items.
+
+    - Annual actions (scarify/aerate/overseed) without a tracking helper get
+      capped at 'soon' so a fresh install does not push major work on day one.
+    - Scarify dominates the pflege round: if it is do_now, fertilize and aerate
+      are sequenced afterwards.
+    """
+    for action in ANNUAL_ACTIONS:
+        if (
+            last_done.get(action) is None
+            and actions[action]["state"] == ACTION_STATE_DO_NOW
+        ):
+            actions[action] = {
+                **actions[action],
+                "state": ACTION_STATE_SOON,
+                "reason": (
+                    actions[action]["reason"]
+                    + " Tipp: input_datetime-Helfer setzen, um Intervalle sauber zu rechnen."
+                ),
+            }
+
+    if actions[ACTION_SCARIFY]["state"] == ACTION_STATE_DO_NOW:
+        if actions[ACTION_FERTILIZE]["state"] == ACTION_STATE_DO_NOW:
+            actions[ACTION_FERTILIZE] = {
+                **actions[ACTION_FERTILIZE],
+                "state": ACTION_STATE_SOON,
+                "next_window": "2–3 Tage nach Vertikutieren",
+                "reason": "Erst vertikutieren, dann nach 2–3 Tagen Regeneration duengen.",
+            }
+        if actions[ACTION_AERATE]["state"] == ACTION_STATE_DO_NOW:
+            actions[ACTION_AERATE] = {
+                **actions[ACTION_AERATE],
+                "state": ACTION_STATE_SOON,
+                "next_window": "Andere Pflegerunde",
+                "reason": "Vertikutieren und Aerifizieren nicht in derselben Pflegerunde kombinieren.",
+            }
+
+    if (
+        actions[ACTION_OVERSEED]["state"] == ACTION_STATE_DO_NOW
+        and actions[ACTION_FERTILIZE]["state"] == ACTION_STATE_DO_NOW
+    ):
+        actions[ACTION_FERTILIZE] = {
+            **actions[ACTION_FERTILIZE],
+            "reason": (
+                actions[ACTION_FERTILIZE]["reason"]
+                + " Tipp: Bei Nachsaat Starterduenger mit wenig Stickstoff einsetzen."
+            ),
+        }
+
+    return actions
+
+
+def _action_mow(
+    growth: float,
+    mowing: float,
+    stress: float,
+    phase: str,
+    rain_risk: float,
+    rain_24h_mm: float,
+    days_since: int | None,
+    hourly: list[dict[str, Any]],
+) -> dict[str, Any]:
+    cooldown = ACTION_COOLDOWN_DAYS[ACTION_MOW]
+    if phase == "dormant":
+        return _result(ACTION_STATE_SKIP, "—", "Rasen ruht – nicht maehen.", days_since, cooldown)
+    if stress >= 65:
+        return _result(ACTION_STATE_SKIP, "Nach Erholung", "Stress hoch – Maehen verschieben.", days_since, cooldown)
+    if days_since is not None and days_since < 3:
+        return _result(
+            ACTION_STATE_WAIT,
+            f"In {3 - days_since} T",
+            f"Vor {days_since} Tag(en) gemaeht – Rasen regenerieren lassen.",
+            days_since,
+            cooldown,
+        )
+    if mowing >= 65 and growth >= 55 and rain_risk < 60 and rain_24h_mm < 2:
+        return _result(ACTION_STATE_DO_NOW, "Heute", "Wachstum aktiv und trockene Bedingungen.", days_since, cooldown)
+    if mowing >= 45:
+        window = _next_dry_window(hourly) or "Bald"
+        return _result(ACTION_STATE_SOON, window, "Bedingungen brauchbar – naechstes trockenes Fenster nutzen.", days_since, cooldown)
+    if rain_risk >= 60 or rain_24h_mm >= 2:
+        return _result(ACTION_STATE_WAIT, "Nach Regen", "Regen erwartet – nasser Schnitt schadet.", days_since, cooldown)
+    return _result(ACTION_STATE_WAIT, "Beobachten", "Wachstum niedrig – Maehen lohnt noch nicht.", days_since, cooldown)
+
+
+def _action_water(
+    water_need: float,
+    phase: str,
+    rain_48h_mm: float,
+    rain_risk: float,
+    days_since: int | None,
+) -> dict[str, Any]:
+    cooldown = ACTION_COOLDOWN_DAYS[ACTION_WATER]
+    if phase == "dormant":
+        return _result(ACTION_STATE_SKIP, "—", "Rasen ruht – kein zusaetzliches Wasser noetig.", days_since, cooldown)
+    if days_since is not None and days_since < 1:
+        return _result(ACTION_STATE_WAIT, "Morgen", "Vor Kurzem bewaessert – Boden ziehen lassen.", days_since, cooldown)
+    if rain_48h_mm >= 5 and water_need < 8:
+        return _result(
+            ACTION_STATE_WAIT,
+            "Nach Regen pruefen",
+            f"Regen in 48h ~{round(rain_48h_mm, 1)} mm – Bewaesserung verschieben.",
+            days_since,
+            cooldown,
+        )
+    if water_need >= 6 and rain_risk < 60:
+        return _result(ACTION_STATE_DO_NOW, "Heute Abend", "Deutliches Defizit – tief und selten waessern.", days_since, cooldown)
+    if water_need >= 3:
+        return _result(ACTION_STATE_SOON, "1–2 T", "Boden trocknet leicht – Bedarf beobachten.", days_since, cooldown)
+    return _result(ACTION_STATE_WAIT, "Beobachten", "Wasserhaushalt aktuell ok.", days_since, cooldown)
+
+
+def _action_fertilize(
+    phase: str,
+    soil_temp: float | None,
+    stress: float,
+    month: int,
+    windows: dict[str, tuple[tuple[int, int], ...]],
+    days_since: int | None,
+) -> dict[str, Any]:
+    cooldown = ACTION_COOLDOWN_DAYS[ACTION_FERTILIZE]
+    win = windows.get(ACTION_FERTILIZE, ())
+    if not _in_window(month, win):
+        return _result(ACTION_STATE_OFF_SEASON, _next_window_label(month, win), "Ausserhalb der Duengesaison.", days_since, cooldown)
+    if phase == "dormant":
+        return _result(ACTION_STATE_SKIP, "Nach Wachstumsstart", "Rasen ruht – Duengen wirkt nicht.", days_since, cooldown)
+    if stress >= 60:
+        return _result(ACTION_STATE_SKIP, "Nach Erholung", "Stress hoch – erst Rasen stabilisieren.", days_since, cooldown)
+    if days_since is not None and days_since < cooldown:
+        return _result(
+            ACTION_STATE_WAIT,
+            f"In {cooldown - days_since} T",
+            f"Letzte Duengung vor {days_since} T – mind. 6 Wochen warten.",
+            days_since,
+            cooldown,
+        )
+    if soil_temp is None:
+        return _result(
+            ACTION_STATE_SOON,
+            "Bei stabiler Bodenwaerme",
+            "Bodentemperatur unbekannt – Sensor ergaenzen fuer genauere Empfehlung.",
+            days_since,
+            cooldown,
+        )
+    if soil_temp < 6:
+        return _result(ACTION_STATE_WAIT, "Bei >8 °C Boden", f"Boden noch zu kuehl ({soil_temp:.0f} °C).", days_since, cooldown)
+    if soil_temp < 8:
+        return _result(ACTION_STATE_SOON, "Wenige Tage", f"Boden fast warm genug ({soil_temp:.0f} °C).", days_since, cooldown)
+    if phase in ("waking_up", "active_growth"):
+        hint = (
+            "Letzte Duengung unbekannt – Helfer setzen fuer genauere Intervalle."
+            if days_since is None
+            else f"Letzte Duengung vor {days_since} T."
+        )
+        return _result(
+            ACTION_STATE_DO_NOW,
+            "Heute oder morgen",
+            f"Boden warm ({soil_temp:.0f} °C), Wachstum aktiv. {hint}",
+            days_since,
+            cooldown,
+        )
+    return _result(ACTION_STATE_SOON, "Bei Wachstumsschub", "Wachstum noch langsam – kurz abwarten.", days_since, cooldown)
+
+
+def _action_scarify(
+    growth: float,
+    soil_temp: float | None,
+    phase: str,
+    stress: float,
+    month: int,
+    windows: dict[str, tuple[tuple[int, int], ...]],
+    rain_24h_mm: float,
+    rain_risk: float,
+    days_since: int | None,
+) -> dict[str, Any]:
+    cooldown = ACTION_COOLDOWN_DAYS[ACTION_SCARIFY]
+    win = windows.get(ACTION_SCARIFY, ())
+    if not _in_window(month, win):
+        return _result(ACTION_STATE_OFF_SEASON, _next_window_label(month, win), "Vertikutieren nur im Fruehjahr oder Spaetsommer.", days_since, cooldown)
+    if phase == "dormant" or stress >= 60:
+        return _result(ACTION_STATE_SKIP, "Nach Erholung", "Rasen aktuell zu belastet zum Vertikutieren.", days_since, cooldown)
+    if days_since is not None and days_since < cooldown:
+        return _result(
+            ACTION_STATE_WAIT,
+            "Naechste Saison",
+            f"Vor {days_since} T vertikutiert – einmal pro Saison reicht.",
+            days_since,
+            cooldown,
+        )
+    if soil_temp is not None and soil_temp < 10:
+        return _result(ACTION_STATE_SOON, "Bei >10 °C Boden", f"Boden noch zu kuehl ({soil_temp:.0f} °C).", days_since, cooldown)
+    if growth < 50:
+        return _result(ACTION_STATE_SOON, "Bei aktivem Wachstum", "Wachstum sollte aktiv sein, damit Rasen die Belastung wegsteckt.", days_since, cooldown)
+    if rain_24h_mm >= 3 or rain_risk >= 50:
+        return _result(ACTION_STATE_WAIT, "Nach 2 trockenen Tagen", "Boden zu nass – Vertikutieren reisst die Narbe auf.", days_since, cooldown)
+    return _result(ACTION_STATE_DO_NOW, "Heute", "Boden trocken und warm, Wachstum aktiv.", days_since, cooldown)
+
+
+def _action_aerate(
+    moisture: float | None,
+    soil_temp: float | None,
+    phase: str,
+    month: int,
+    windows: dict[str, tuple[tuple[int, int], ...]],
+    days_since: int | None,
+) -> dict[str, Any]:
+    cooldown = ACTION_COOLDOWN_DAYS[ACTION_AERATE]
+    win = windows.get(ACTION_AERATE, ())
+    if not _in_window(month, win):
+        return _result(ACTION_STATE_OFF_SEASON, _next_window_label(month, win), "Aerifizieren passt im Fruehjahr oder Herbst.", days_since, cooldown)
+    if phase == "dormant":
+        return _result(ACTION_STATE_SKIP, "Nach Wachstumsstart", "Rasen ruht – Aerifizieren spaeter ansetzen.", days_since, cooldown)
+    if days_since is not None and days_since < cooldown:
+        return _result(
+            ACTION_STATE_WAIT,
+            "Naechste Saison",
+            f"Vor {days_since} T aerifiziert – einmal pro Jahr ist ueblich.",
+            days_since,
+            cooldown,
+        )
+    if soil_temp is not None and soil_temp < 8:
+        return _result(ACTION_STATE_SOON, "Bei >8 °C Boden", f"Boden noch zu kuehl ({soil_temp:.0f} °C).", days_since, cooldown)
+    if moisture is not None and moisture > 75:
+        return _result(ACTION_STATE_WAIT, "Nach Abtrocknen", "Boden zu nass – Loecher wuerden verschmieren.", days_since, cooldown)
+    return _result(ACTION_STATE_DO_NOW, "Heute", "Bedingungen passen – verdichtete Stellen entlueften.", days_since, cooldown)
+
+
+def _action_overseed(
+    soil_temp: float | None,
+    stress: float,
+    month: int,
+    windows: dict[str, tuple[tuple[int, int], ...]],
+    daily: list[dict[str, Any]],
+    days_since: int | None,
+) -> dict[str, Any]:
+    cooldown = ACTION_COOLDOWN_DAYS[ACTION_OVERSEED]
+    win = windows.get(ACTION_OVERSEED, ())
+    if not _in_window(month, win):
+        return _result(ACTION_STATE_OFF_SEASON, _next_window_label(month, win), "Nachsaat wirkt nur in Saatfenstern.", days_since, cooldown)
+    if stress >= 60:
+        return _result(ACTION_STATE_SKIP, "Nach Erholung", "Stress hoch – Keimlinge wuerden leiden.", days_since, cooldown)
+    if days_since is not None and days_since < cooldown:
+        return _result(
+            ACTION_STATE_WAIT,
+            f"In {cooldown - days_since} T",
+            f"Letzte Nachsaat vor {days_since} T – Keimung abwarten.",
+            days_since,
+            cooldown,
+        )
+    if soil_temp is not None and soil_temp < 10:
+        return _result(ACTION_STATE_SOON, "Bei >10 °C Boden", f"Boden noch zu kuehl ({soil_temp:.0f} °C) fuer sichere Keimung.", days_since, cooldown)
+    if _has_extreme_forecast(daily[:14]):
+        return _result(ACTION_STATE_WAIT, "Nach Wetterumschwung", "Hitze oder Frost in den naechsten 14 Tagen – Keimung gefaehrdet.", days_since, cooldown)
+    return _result(ACTION_STATE_DO_NOW, "Diese Woche", "Boden warm, stabiles Wetter – ideale Keimbedingungen.", days_since, cooldown)
+
+
+def _has_extreme_forecast(daily: list[dict[str, Any]]) -> bool:
+    for item in daily:
+        high = _forecast_number(item, "temperature")
+        low = _forecast_number(item, "templow")
+        if high is not None and high >= 30:
+            return True
+        if low is not None and low <= 2:
+            return True
+    return False
+
+
+def _next_dry_window(hourly: list[dict[str, Any]]) -> str | None:
+    for item in hourly[:48]:
+        probability = _forecast_number(item, "precipitation_probability", 0) or 0
+        precipitation = _forecast_number(item, "precipitation", 0) or 0
+        if probability <= 30 and precipitation <= 0.3:
+            return _format_forecast_time(item.get("datetime"))
+    return None
+
+
+def _in_window(month: int, windows: tuple[tuple[int, int], ...]) -> bool:
+    return any(start <= month <= end for start, end in windows)
+
+
+def _next_window_label(month: int, windows: tuple[tuple[int, int], ...]) -> str:
+    if not windows:
+        return "—"
+    upcoming = [start for start, _ in windows if start > month]
+    if upcoming:
+        return MONTH_NAMES_DE[min(upcoming) - 1]
+    next_start = min(start for start, _ in windows)
+    return f"{MONTH_NAMES_DE[next_start - 1]} (naechstes Jahr)"
+
+
+def _days_since_state(state_str: str | None, now: datetime) -> int | None:
+    if not state_str:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(state_str).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=now.tzinfo or timezone.utc)
+    delta = now - parsed
+    if delta.total_seconds() < 0:
+        return 0
+    return int(delta.total_seconds() // 86400)
+
+
+def _result(
+    state: str,
+    next_window: str,
+    reason: str,
+    days_since: int | None,
+    cooldown_days: int,
+) -> dict[str, Any]:
+    return {
+        "state": state,
+        "next_window": next_window,
+        "reason": reason,
+        "days_since": days_since,
+        "cooldown_days": cooldown_days,
+    }
+
+
+def _next_action(actions: dict[str, dict[str, Any]]) -> str:
+    for target in (ACTION_STATE_DO_NOW, ACTION_STATE_SOON):
+        for action in NEXT_ACTION_PRIORITY:
+            if actions.get(action, {}).get("state") == target:
+                return action
+    return "none"

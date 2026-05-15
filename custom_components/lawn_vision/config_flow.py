@@ -23,6 +23,12 @@ from .const import (
     CONF_GRASS_TYPE,
     CONF_GTS_ENTITY,
     CONF_HUMIDITY_ENTITY,
+    CONF_LAST_AERATE_ENTITY,
+    CONF_LAST_FERTILIZE_ENTITY,
+    CONF_LAST_MOW_ENTITY,
+    CONF_LAST_OVERSEED_ENTITY,
+    CONF_LAST_SCARIFY_ENTITY,
+    CONF_LAST_WATER_ENTITY,
     CONF_MEAN_DAILY_TEMPERATURE_ENTITY,
     CONF_MOISTURE_ENTITY,
     CONF_MOISTURE_10CM_ENTITY,
@@ -58,6 +64,12 @@ def _schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
             CONF_RAIN_ENTITY,
             CONF_GTS_ENTITY,
             CONF_GDD_ENTITY,
+            CONF_LAST_MOW_ENTITY,
+            CONF_LAST_WATER_ENTITY,
+            CONF_LAST_FERTILIZE_ENTITY,
+            CONF_LAST_SCARIFY_ENTITY,
+            CONF_LAST_AERATE_ENTITY,
+            CONF_LAST_OVERSEED_ENTITY,
         )
     }
 
@@ -118,6 +130,24 @@ def _schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
                 default=defaults.get(CONF_GRASS_TYPE, DEFAULT_GRASS_TYPE),
             ): SelectSelector(
                 SelectSelectorConfig(options=GRASS_TYPES, translation_key=CONF_GRASS_TYPE)
+            ),
+            vol.Optional(CONF_LAST_MOW_ENTITY, **entity_defaults[CONF_LAST_MOW_ENTITY]): EntitySelector(
+                EntitySelectorConfig(domain="input_datetime")
+            ),
+            vol.Optional(CONF_LAST_WATER_ENTITY, **entity_defaults[CONF_LAST_WATER_ENTITY]): EntitySelector(
+                EntitySelectorConfig(domain="input_datetime")
+            ),
+            vol.Optional(CONF_LAST_FERTILIZE_ENTITY, **entity_defaults[CONF_LAST_FERTILIZE_ENTITY]): EntitySelector(
+                EntitySelectorConfig(domain="input_datetime")
+            ),
+            vol.Optional(CONF_LAST_SCARIFY_ENTITY, **entity_defaults[CONF_LAST_SCARIFY_ENTITY]): EntitySelector(
+                EntitySelectorConfig(domain="input_datetime")
+            ),
+            vol.Optional(CONF_LAST_AERATE_ENTITY, **entity_defaults[CONF_LAST_AERATE_ENTITY]): EntitySelector(
+                EntitySelectorConfig(domain="input_datetime")
+            ),
+            vol.Optional(CONF_LAST_OVERSEED_ENTITY, **entity_defaults[CONF_LAST_OVERSEED_ENTITY]): EntitySelector(
+                EntitySelectorConfig(domain="input_datetime")
             ),
         }
     )
