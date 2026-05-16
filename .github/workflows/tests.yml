@@ -1,0 +1,37 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Python
+        run: |
+          python -m compileall -q custom_components tests
+      - name: Run unittest suite
+        run: |
+          python -m unittest tests.test_lawn_vision -v
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Validate JSON manifests and translations
+        run: |
+          python3 -c "import json,sys,pathlib; [json.load(open(p)) for p in pathlib.Path('.').rglob('*.json') if '.git' not in p.parts]" \
+            && echo "all JSON valid"
+      - name: Syntax-check dashboard card
+        run: |
+          node --check dist/lawn-vision.js
