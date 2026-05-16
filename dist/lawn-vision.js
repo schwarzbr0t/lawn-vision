@@ -90,6 +90,8 @@ class LawnVisionCard extends HTMLElement {
       background_image: "/local/community/lawn-vision/rasen.png",
       layout: "auto",
       size: "normal",
+      show_care_guide: true,
+      show_recommendation: false,
       entity_phase: "sensor.lawn_vision_phase",
       entity_growth: "sensor.lawn_vision_growth_score",
       entity_soil_temperature: "sensor.lawn_vision_soil_temperature",
