@@ -101,7 +101,7 @@ Copy the card:
 
 ```bash
 mkdir -p /config/www/community/lawn-vision
-cp dist/lawn-vision.js /config/www/community/lawn-vision/lawn-vision.js
+cp card/dist/lawn-vision.js /config/www/community/lawn-vision/lawn-vision.js
 cp docs/rasen.png /config/www/community/lawn-vision/rasen.png
 ```
 
@@ -211,18 +211,23 @@ The card also provides a visual editor in the Home Assistant dashboard card
 dialog. Open the card, switch to the visual editor, and adjust layout, sections,
 colors, opacity, blur, radii and text scale without editing YAML by hand.
 
-## HACS packaging note
+## HACS packaging
 
-This MVP keeps the integration and the dashboard card in one repository because
-it is easier to iterate on the product shape. For a public HACS launch, the
-cleanest route is usually one of these:
+This repository is shaped as a **HACS custom integration**: the root
+`hacs.json` advertises the integration and HACS will pick up
+`custom_components/lawn_vision/` automatically when the repo is added
+as an *Integration* repository.
 
-- Publish two repositories: `lawn-vision` as an integration and
-  `lawn-vision-card` as a dashboard card.
-- Keep this repository as a custom/manual install during early alpha testing.
+The Lovelace dashboard card lives in [card/](card/) so it can be moved
+to its own repository (e.g. `schwarzbr0t/lawn-vision-card`) when the
+API stabilizes. Until then, install the card manually using
+[card/README.md](card/README.md) or as part of the manual install
+above.
 
-The dashboard file is named `dist/lawn-vision.js` so a Dashboard-type HACS repo
-named `lawn-vision` can discover it.
+Splitting the card out is then mechanical: copy `card/` into a fresh
+repository, keep `card/dist/lawn-vision.js` at `dist/lawn-vision.js`
+in the new repo root, and HACS will detect it as a *Lovelace plugin*
+via the shipped `hacs.json`.
 
 ## Calculation model
 

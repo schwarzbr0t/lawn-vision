@@ -34,4 +34,4 @@ jobs:
             && echo "all JSON valid"
       - name: Syntax-check dashboard card
         run: |
-          node --check dist/lawn-vision.js
+          node --check card/dist/lawn-vision.js
