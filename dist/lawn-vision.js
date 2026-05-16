@@ -1852,6 +1852,23 @@ class LawnVisionCardEditor extends HTMLElement {
           text-align: right;
         }
 
+        details {
+          display: grid;
+          gap: 10px;
+          padding: 4px 0;
+        }
+
+        details summary {
+          cursor: pointer;
+          font-weight: 650;
+          color: var(--primary-text-color);
+          padding: 4px 0;
+        }
+
+        details[open] summary {
+          margin-bottom: 4px;
+        }
+
         @media (max-width: 600px) {
           .grid {
             grid-template-columns: 1fr;
@@ -1908,6 +1925,47 @@ class LawnVisionCardEditor extends HTMLElement {
             ${this.toggle("show_timeline", "Timeline anzeigen", this.config.show_timeline !== false)}
             ${this.toggle("show_recommendation", "Empfehlung anzeigen", this.config.show_recommendation !== false)}
           </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Entitaeten</legend>
+          <details>
+            <summary>Kernsensoren</summary>
+            ${this.entityField("entity_phase", "Phase", "sensor.lawn_vision_phase")}
+            ${this.entityField("entity_growth", "Wachstum (Pflicht)", "sensor.lawn_vision_growth_score")}
+            ${this.entityField("entity_mowing", "Maehfenster", "sensor.lawn_vision_mowing_condition")}
+            ${this.entityField("entity_water", "Wasserbedarf", "sensor.lawn_vision_water_need")}
+            ${this.entityField("entity_stress", "Stress", "sensor.lawn_vision_stress_level")}
+            ${this.entityField("entity_recommendation", "Empfehlung", "sensor.lawn_vision_recommendation")}
+          </details>
+          <details>
+            <summary>Agronomie</summary>
+            ${this.entityField("entity_soil_temperature", "Bodentemperatur", "sensor.lawn_vision_soil_temperature")}
+            ${this.entityField("entity_mean_daily_temperature", "Tagesmittel", "sensor.lawn_vision_mean_daily_temperature")}
+            ${this.entityField("entity_grassland_temperature_sum", "GTS", "sensor.lawn_vision_grassland_temperature_sum")}
+            ${this.entityField("entity_growing_degree_days", "GDD", "sensor.lawn_vision_growing_degree_days")}
+            ${this.entityField("entity_moisture_10cm", "Bodenfeuchte 10 cm", "sensor.lawn_vision_moisture_10cm")}
+            ${this.entityField("entity_moisture_20cm", "Bodenfeuchte 20 cm", "sensor.lawn_vision_moisture_20cm")}
+            ${this.entityField("entity_moisture_30cm", "Bodenfeuchte 30 cm", "sensor.lawn_vision_moisture_30cm")}
+          </details>
+          <details>
+            <summary>Prognose</summary>
+            ${this.entityField("entity_forecast_rain_risk", "Regenrisiko", "sensor.lawn_vision_forecast_rain_risk")}
+            ${this.entityField("entity_forecast_water_need", "Wasserbedarf 48h", "sensor.lawn_vision_forecast_water_need")}
+            ${this.entityField("entity_forecast_growth_trend", "Wachstumstrend", "sensor.lawn_vision_forecast_growth_trend")}
+            ${this.entityField("entity_forecast_best_window", "Pflegefenster", "sensor.lawn_vision_forecast_best_window")}
+            ${this.entityField("entity_forecast_care_hint", "Pflegehinweis", "sensor.lawn_vision_forecast_care_hint")}
+          </details>
+          <details open>
+            <summary>Pflegeguide</summary>
+            ${this.entityField("entity_next_action", "Naechste Aktion", "sensor.lawn_vision_next_action")}
+            ${this.entityField("entity_action_mow", "Aktion Maehen", "sensor.lawn_vision_action_mow")}
+            ${this.entityField("entity_action_water", "Aktion Bewaessern", "sensor.lawn_vision_action_water")}
+            ${this.entityField("entity_action_fertilize", "Aktion Duengen", "sensor.lawn_vision_action_fertilize")}
+            ${this.entityField("entity_action_scarify", "Aktion Vertikutieren", "sensor.lawn_vision_action_scarify")}
+            ${this.entityField("entity_action_aerate", "Aktion Aerifizieren", "sensor.lawn_vision_action_aerate")}
+            ${this.entityField("entity_action_overseed", "Aktion Nachsaat", "sensor.lawn_vision_action_overseed")}
+          </details>
         </fieldset>
 
         <fieldset>
@@ -1995,6 +2053,16 @@ class LawnVisionCardEditor extends HTMLElement {
       <label class="toggle">
         <span>${this.escape(label)}</span>
         <input type="checkbox" data-path="${this.escape(path)}" ${checked ? "checked" : ""} />
+      </label>
+    `;
+  }
+
+  entityField(path, label, placeholder) {
+    const value = this.config[path] ?? "";
+    return `
+      <label>
+        ${this.escape(label)}
+        <input type="text" data-path="${this.escape(path)}" value="${this.escape(value)}" placeholder="${this.escape(placeholder)}" />
       </label>
     `;
   }
