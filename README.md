@@ -232,10 +232,21 @@ The MVP is intentionally transparent. It estimates:
 These rules are not a replacement for agronomic measurements, but they create a
 useful first decision layer for Home Assistant users.
 
+## Example automations
+
+See [examples/automations.yaml](examples/automations.yaml) for ready-made
+automations that:
+
+- Notify when the headline care action changes
+- Log the last mow when a robot mower returns to its dock
+- Run irrigation when the water action turns `do_now` and rain risk is low
+- Send a fertilize reminder when the window opens
+- Pause the mower under high stress
+
 ## Roadmap
 
-- 7 to 14 day forecast window.
-- DWD/Open-Meteo source adapter.
-- Mower and irrigation automation helpers.
-- Lawn journal entities: last mow, last fertilize, last overseed.
+- 7 to 14 day forecast window with per-day care plan.
+- DWD/Open-Meteo source adapter for users without a weather entity.
+- Lawn journal entities exposed as native sensors (currently
+  `input_datetime` helpers are wired in via the options flow).
 - HACS-ready split packages once the API stabilizes.
