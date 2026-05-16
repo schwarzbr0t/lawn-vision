@@ -41,6 +41,8 @@ class LawnVisionCard extends HTMLElement {
       entity_action_aerate: undefined,
       entity_action_overseed: undefined,
       entity_next_action: undefined,
+      entity_care_plan_7d: undefined,
+      show_care_plan_7d: true,
       ...config,
     };
 
@@ -117,6 +119,7 @@ class LawnVisionCard extends HTMLElement {
       entity_action_aerate: "sensor.lawn_vision_action_aerate",
       entity_action_overseed: "sensor.lawn_vision_action_overseed",
       entity_next_action: "sensor.lawn_vision_next_action",
+      entity_care_plan_7d: "sensor.lawn_vision_care_plan_7d",
     };
   }
 
@@ -163,6 +166,8 @@ class LawnVisionCard extends HTMLElement {
     const showRecommendation = this.config.show_recommendation !== false;
     const showCareGuide = this.config.show_care_guide !== false;
     const careGuide = this.careGuideData();
+    const showCarePlan7d = this.config.show_care_plan_7d !== false;
+    const carePlan7d = this.carePlan7dData();
 
     this.applyBackground();
     this.applyVisuals(tone);
@@ -207,6 +212,25 @@ class LawnVisionCard extends HTMLElement {
             )
             .join("")}
         </section>
+
+        ${showCarePlan7d && carePlan7d.days.length ? `
+        <section class="care-plan-7d" aria-label="Pflegeplan 7 Tage">
+          <header class="care-plan-7d__head">
+            <span class="kicker">Pflegeplan</span>
+            <strong>${carePlan7d.actionable} von ${carePlan7d.days.length} Tagen aktiv</strong>
+          </header>
+          <ol class="care-plan-7d__grid">
+            ${carePlan7d.days.map((day) => `
+              <li class="care-plan-day care-plan-day--${day.tone}">
+                <span class="care-plan-day__label">${this.escape(day.day)}</span>
+                <ha-icon icon="${day.icon}"></ha-icon>
+                <strong>${this.escape(this.formatTempRange(day.temp_max, day.temp_min))}</strong>
+                <em>${this.escape(day.hint)}</em>
+                ${day.rain_probability ? `<small>${this.escape(`${day.rain_probability}%`)}</small>` : ""}
+              </li>
+            `).join("")}
+          </ol>
+        </section>` : ""}
 
         ${showCareGuide && (careGuide.headline || careGuide.items.length) ? `
         <section class="care-guide" aria-label="Pflegeguide">
@@ -590,6 +614,29 @@ class LawnVisionCard extends HTMLElement {
     }
 
     return { headline, items };
+  }
+
+  carePlan7dData() {
+    const entity = this.config.entity_care_plan_7d
+      && this._hass?.states?.[this.config.entity_care_plan_7d];
+    if (!entity) {
+      return { days: [], actionable: 0 };
+    }
+    const attrs = entity.attributes || {};
+    const days = Array.isArray(attrs.days) ? attrs.days : [];
+    return {
+      days,
+      actionable: Number.isFinite(attrs.actionable) ? attrs.actionable : 0,
+    };
+  }
+
+  formatTempRange(high, low) {
+    const hiOk = Number.isFinite(high);
+    const loOk = Number.isFinite(low);
+    if (hiOk && loOk) return `${Math.round(high)}° / ${Math.round(low)}°`;
+    if (hiOk) return `${Math.round(high)}°`;
+    if (loOk) return `${Math.round(low)}°`;
+    return "--";
   }
 
   numberState(entityId) {
@@ -1705,6 +1752,101 @@ class LawnVisionCard extends HTMLElement {
         color: rgba(255, 255, 255, .78);
         line-height: 1.3;
       }
+
+      .care-plan-7d {
+        display: grid;
+        gap: 10px;
+        padding: var(--lv-plan-pad);
+        border-radius: var(--lv-section-radius, 12px);
+        background: rgba(7, 17, 26, calc(var(--lv-panel-opacity) * .9));
+        border: 1px solid rgba(255, 255, 255, .06);
+      }
+
+      .care-plan-7d__head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        color: rgba(255, 255, 255, .9);
+      }
+
+      .care-plan-7d__head .kicker {
+        font-size: var(--lv-kicker);
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, .68);
+      }
+
+      .care-plan-7d__head strong {
+        font-size: var(--lv-text);
+        color: var(--lv-accent);
+      }
+
+      .care-plan-7d__grid {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .care-plan-day {
+        display: grid;
+        gap: 4px;
+        padding: 8px 4px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, .05);
+        border: 1px solid rgba(255, 255, 255, .08);
+        text-align: center;
+        align-content: start;
+      }
+
+      .care-plan-day--good {
+        background: rgba(66, 214, 93, .14);
+        border-color: rgba(66, 214, 93, .35);
+      }
+
+      .care-plan-day--warn {
+        background: rgba(244, 183, 47, .14);
+        border-color: rgba(244, 183, 47, .35);
+      }
+
+      .care-plan-day--muted { opacity: .72; }
+
+      .care-plan-day__label {
+        font-weight: 700;
+        font-size: calc(var(--lv-kicker) * 1.1);
+        color: rgba(255, 255, 255, .85);
+      }
+
+      .care-plan-day ha-icon {
+        --mdc-icon-size: calc(var(--lv-icon) * 1.05);
+        color: rgba(255, 255, 255, .9);
+        margin: 2px auto;
+      }
+
+      .care-plan-day strong {
+        font-size: calc(var(--lv-text) * .95);
+      }
+
+      .care-plan-day em {
+        font-style: normal;
+        font-size: calc(var(--lv-kicker) * 1.05);
+        color: rgba(255, 255, 255, .7);
+        line-height: 1.2;
+      }
+
+      .care-plan-day small {
+        font-size: calc(var(--lv-kicker) * 1.05);
+        color: var(--lv-water);
+      }
+
+      .lawn-vision__root[data-size="compact"] .care-plan-7d__grid,
+      .lawn-vision__root[data-size="medium"] .care-plan-7d__grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-auto-flow: row;
+      }
     `;
   }
 }
@@ -1734,6 +1876,7 @@ class LawnVisionCardEditor extends HTMLElement {
       show_timeline: true,
       show_recommendation: true,
       show_care_guide: true,
+      show_care_plan_7d: true,
       visual: {},
       ...config,
     };
@@ -1922,6 +2065,7 @@ class LawnVisionCardEditor extends HTMLElement {
           </div>
           <div class="toggles">
             ${this.toggle("show_care_guide", "Pflegeguide anzeigen", this.config.show_care_guide !== false)}
+            ${this.toggle("show_care_plan_7d", "7-Tage-Plan anzeigen", this.config.show_care_plan_7d !== false)}
             ${this.toggle("show_agro", "Agronomie anzeigen", this.config.show_agro !== false)}
             ${this.toggle("show_forecast", "Prognose anzeigen", this.config.show_forecast !== false)}
             ${this.toggle("show_timeline", "Timeline anzeigen", this.config.show_timeline !== false)}
@@ -1961,6 +2105,7 @@ class LawnVisionCardEditor extends HTMLElement {
           <details open>
             <summary>Pflegeguide</summary>
             ${this.entityField("entity_next_action", "Naechste Aktion", "sensor.lawn_vision_next_action")}
+            ${this.entityField("entity_care_plan_7d", "Pflegeplan 7 Tage", "sensor.lawn_vision_care_plan_7d")}
             ${this.entityField("entity_action_mow", "Aktion Maehen", "sensor.lawn_vision_action_mow")}
             ${this.entityField("entity_action_water", "Aktion Bewaessern", "sensor.lawn_vision_action_water")}
             ${this.entityField("entity_action_fertilize", "Aktion Duengen", "sensor.lawn_vision_action_fertilize")}

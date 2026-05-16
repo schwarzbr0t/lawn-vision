@@ -102,6 +102,10 @@
           "mdi:eye-outline": "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
           "mdi:calendar-clock": "M4 6h16v4H4V6Zm0 0V4h16v2M8 2v4M16 2v4M15 16a4 4 0 1 1-4-4M15 14l2 2 3-3",
           "mdi:weather-pouring": "M6 9a6 6 0 0 1 12 0 4 4 0 1 1-2 7H8a4 4 0 1 1-2-7Zm2 9-1 3m4-3-1 3m4-3-1 3m4-3-1 3",
+          "mdi:weather-cloudy": "M6 9a6 6 0 0 1 12 0 4 4 0 1 1-2 7H8a4 4 0 1 1-2-7Z",
+          "mdi:weather-fog": "M3 8h18M3 12h18M3 16h12",
+          "mdi:weather-partly-cloudy": "M12 4a4 4 0 0 1 4 4M10 11a5 5 0 0 1 10 0 3 3 0 1 1-1.5 5.6H8a3 3 0 1 1-1.5-5.6 5 5 0 0 1 3.5-5",
+          "mdi:calendar-week-outline": "M4 6h16v14H4V6Zm0 0V4h16v2M8 2v4M16 2v4M4 10h16M8 14h2M14 14h2M8 18h2",
           "mdi:trending-up": "M3 17l6-6 4 4 8-8M15 7h6v6",
           "mdi:calendar-check-outline": "M4 6h16v14H4V6Zm0 0V4h16v2M8 2v4M16 2v4M8 14l3 3 5-5",
           "mdi:watering-can": "M4 11h7l7-3v9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-6Zm14-3 2-3",
@@ -143,6 +147,7 @@
         entity_action_aerate: "sensor.lawn_vision_action_aerate",
         entity_action_overseed: "sensor.lawn_vision_action_overseed",
         entity_next_action: "sensor.lawn_vision_next_action",
+        entity_care_plan_7d: "sensor.lawn_vision_care_plan_7d",
       });
       card.hass = {
         states: {
@@ -230,6 +235,23 @@
               reason: "Wachstum aktiv und trockene Bedingungen.",
               days_since: 6,
               cooldown_days: 7,
+            },
+          },
+          "sensor.lawn_vision_care_plan_7d": {
+            state: 4,
+            attributes: {
+              actionable: 4,
+              rain_days: 1,
+              heat_days: 0,
+              days: [
+                { date: "2026-05-16", day: "Sa", temp_max: 21, temp_min: 11, precipitation_mm: 0, rain_probability: 10, hint: "Maehfenster", icon: "mdi:robot-mower", tone: "good" },
+                { date: "2026-05-17", day: "So", temp_max: 22, temp_min: 12, precipitation_mm: 0, rain_probability: 15, hint: "Maehfenster", icon: "mdi:robot-mower", tone: "good" },
+                { date: "2026-05-18", day: "Mo", temp_max: 19, temp_min: 11, precipitation_mm: 6, rain_probability: 75, hint: "Regen erwartet", icon: "mdi:weather-pouring", tone: "muted" },
+                { date: "2026-05-19", day: "Di", temp_max: 18, temp_min: 10, precipitation_mm: 1, rain_probability: 30, hint: "Stabil", icon: "mdi:weather-partly-cloudy", tone: "neutral" },
+                { date: "2026-05-20", day: "Mi", temp_max: 23, temp_min: 13, precipitation_mm: 0, rain_probability: 10, hint: "Maehfenster", icon: "mdi:robot-mower", tone: "good" },
+                { date: "2026-05-21", day: "Do", temp_max: 25, temp_min: 14, precipitation_mm: 0, rain_probability: 5, hint: "Maehfenster", icon: "mdi:robot-mower", tone: "good" },
+                { date: "2026-05-22", day: "Fr", temp_max: 28, temp_min: 16, precipitation_mm: 0, rain_probability: 20, hint: "Stabil", icon: "mdi:weather-partly-cloudy", tone: "neutral" },
+              ],
             },
           },
         },
