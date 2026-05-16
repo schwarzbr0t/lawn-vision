@@ -6,6 +6,7 @@
         "description": "Erstellt einen lokalen Rasenberater aus vorhandenen Home-Assistant-Wetter- und Gartensensoren.",
         "data": {
           "name": "Name",
+          "use_open_meteo": "Open-Meteo als Wetterquelle nutzen",
           "weather_entity": "Wetter-Entitaet",
           "temperature_entity": "Temperatursensor",
           "mean_daily_temperature_entity": "Mittlere Tagestemperatur",
@@ -44,6 +45,7 @@
         "title": "Lawn Vision Optionen",
         "data": {
           "name": "Name",
+          "use_open_meteo": "Open-Meteo als Wetterquelle nutzen",
           "weather_entity": "Wetter-Entitaet",
           "temperature_entity": "Temperatursensor",
           "mean_daily_temperature_entity": "Mittlere Tagestemperatur",

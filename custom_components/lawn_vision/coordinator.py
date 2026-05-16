@@ -43,6 +43,7 @@ from .const import (
     CONF_RAIN_ENTITY,
     CONF_SOIL_TEMPERATURE_ENTITY,
     CONF_TEMPERATURE_ENTITY,
+    CONF_USE_OPEN_METEO,
     CONF_WEATHER_ENTITY,
     DEFAULT_AREA_M2,
     DEFAULT_GRASS_TYPE,
@@ -71,6 +72,7 @@ from .const import (
     SENSOR_STRESS_LEVEL,
     SENSOR_WATER_NEED,
 )
+from .weather_source import fetch_open_meteo
 
 LOGGER = logging.getLogger(__name__)
 
@@ -119,22 +121,42 @@ class LawnVisionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         config = self.config
         weather_state = self._state(config.get(CONF_WEATHER_ENTITY))
 
+        om_payload: dict[str, Any] | None = None
+        if config.get(CONF_USE_OPEN_METEO):
+            om_payload = await fetch_open_meteo(
+                self.hass,
+                self.hass.config.latitude,
+                self.hass.config.longitude,
+            )
+        om_current = (om_payload or {}).get("current", {}) if om_payload else {}
+
+        weather_temp = weather_state.attributes.get("temperature") if weather_state else None
+        weather_humidity = weather_state.attributes.get("humidity") if weather_state else None
+        weather_precip = weather_state.attributes.get("precipitation") if weather_state else None
+        condition = (weather_state.state if weather_state else None) or om_current.get("condition")
+
         inputs = LawnInputs(
             temperature_c=self._number_from_entity(
                 config.get(CONF_TEMPERATURE_ENTITY),
-                weather_state.attributes.get("temperature") if weather_state else None,
+                weather_temp,
+                om_current.get("temperature_c"),
             ),
             mean_daily_temperature_c=self._number_from_entity(
                 config.get(CONF_MEAN_DAILY_TEMPERATURE_ENTITY)
             ),
             soil_temperature_c=self._number_from_entity(
-                config.get(CONF_SOIL_TEMPERATURE_ENTITY)
+                config.get(CONF_SOIL_TEMPERATURE_ENTITY),
+                om_current.get("soil_temperature_c"),
             ),
             humidity_pct=self._number_from_entity(
                 config.get(CONF_HUMIDITY_ENTITY),
-                weather_state.attributes.get("humidity") if weather_state else None,
+                weather_humidity,
+                om_current.get("humidity_pct"),
             ),
-            moisture_pct=self._number_from_entity(config.get(CONF_MOISTURE_ENTITY)),
+            moisture_pct=self._number_from_entity(
+                config.get(CONF_MOISTURE_ENTITY),
+                om_current.get("moisture_pct"),
+            ),
             moisture_10cm_m3m3=self._moisture_m3m3_from_entity(
                 config.get(CONF_MOISTURE_10CM_ENTITY)
             ),
@@ -146,16 +168,20 @@ class LawnVisionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ),
             rain_mm=self._number_from_entity(
                 config.get(CONF_RAIN_ENTITY),
-                weather_state.attributes.get("precipitation") if weather_state else None,
+                weather_precip,
+                om_current.get("rain_mm"),
             ),
             grassland_temperature_sum=self._number_from_entity(config.get(CONF_GTS_ENTITY)),
             growing_degree_days=self._number_from_entity(config.get(CONF_GDD_ENTITY)),
-            condition=weather_state.state if weather_state else None,
+            condition=condition,
             grass_type=config.get(CONF_GRASS_TYPE, DEFAULT_GRASS_TYPE),
             area_m2=float(config.get(CONF_AREA_M2, DEFAULT_AREA_M2)),
         )
 
-        forecast = await self._async_get_forecast(config.get(CONF_WEATHER_ENTITY))
+        if om_payload and om_payload.get("forecast"):
+            forecast = om_payload["forecast"]
+        else:
+            forecast = await self._async_get_forecast(config.get(CONF_WEATHER_ENTITY))
         last_done: dict[str, str | None] = {}
         for action in CARE_ACTIONS:
             override = self._state_string(config.get(ACTION_LAST_DONE_KEYS[action]))
@@ -196,19 +222,23 @@ class LawnVisionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return state.state
 
     def _number_from_entity(
-        self, entity_id: str | None, fallback: Any | None = None
+        self, entity_id: str | None, *fallbacks: Any
     ) -> float | None:
-        """Read a numeric value from an entity state or fallback."""
-        value = fallback
+        """Read a numeric value from an entity, or fall back to the first usable value."""
         state = self._state(entity_id)
-        if state is not None:
-            value = state.state
-        try:
-            if value in (None, "unknown", "unavailable"):
-                return None
-            return float(value)
-        except (TypeError, ValueError):
-            return None
+        if state is not None and state.state not in (None, "unknown", "unavailable", ""):
+            try:
+                return float(state.state)
+            except (TypeError, ValueError):
+                pass
+        for fb in fallbacks:
+            if fb in (None, "unknown", "unavailable", ""):
+                continue
+            try:
+                return float(fb)
+            except (TypeError, ValueError):
+                continue
+        return None
 
     def _moisture_m3m3_from_entity(self, entity_id: str | None) -> float | None:
         """Read volumetric soil moisture and normalize percent sensors to m3/m3."""

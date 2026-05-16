@@ -21,6 +21,7 @@ for _mod in (
     sys.modules.setdefault(_mod, MagicMock())
 
 from custom_components.lawn_vision import coordinator as cc  # noqa: E402
+from custom_components.lawn_vision import weather_source as ws  # noqa: E402
 
 
 def make_inputs(**overrides):
@@ -317,6 +318,71 @@ class TestCarePlan7d(unittest.TestCase):
         plan = cc._care_plan_7d({"hourly": [], "daily": daily}, make_inputs(), NOW_MAY)
         self.assertEqual(plan["days"][0]["tone"], "good")
         self.assertEqual(plan["actionable"], 1)
+
+
+class TestOpenMeteoMapping(unittest.TestCase):
+    def _payload(self):
+        return {
+            "current": {
+                "temperature_2m": 18.5,
+                "relative_humidity_2m": 62,
+                "precipitation": 0.4,
+                "weather_code": 3,
+                "soil_temperature_18cm": 12.1,
+                "soil_moisture_9_27cm": 0.31,
+            },
+            "hourly": {
+                "time": ["2026-05-15T14:00", "2026-05-15T15:00"],
+                "temperature_2m": [19, 20],
+                "precipitation": [0, 0.2],
+                "precipitation_probability": [10, 30],
+                "weather_code": [3, 61],
+            },
+            "daily": {
+                "time": ["2026-05-15", "2026-05-16"],
+                "temperature_2m_max": [22, 25],
+                "temperature_2m_min": [11, 13],
+                "precipitation_sum": [0.4, 5.1],
+                "precipitation_probability_max": [40, 70],
+                "weather_code": [3, 65],
+            },
+        }
+
+    def test_current_payload(self):
+        mapped = ws.map_open_meteo(self._payload())
+        current = mapped["current"]
+        self.assertEqual(current["temperature_c"], 18.5)
+        self.assertEqual(current["humidity_pct"], 62)
+        self.assertEqual(current["soil_temperature_c"], 12.1)
+        self.assertAlmostEqual(current["moisture_pct"], 31.0)
+        self.assertEqual(current["condition"], "cloudy")
+
+    def test_hourly_items(self):
+        mapped = ws.map_open_meteo(self._payload())
+        hourly = mapped["forecast"]["hourly"]
+        self.assertEqual(len(hourly), 2)
+        self.assertEqual(hourly[0]["temperature"], 19)
+        self.assertEqual(hourly[0]["condition"], "cloudy")
+        self.assertEqual(hourly[1]["condition"], "rainy")
+        self.assertEqual(hourly[1]["precipitation_probability"], 30)
+
+    def test_daily_items(self):
+        mapped = ws.map_open_meteo(self._payload())
+        daily = mapped["forecast"]["daily"]
+        self.assertEqual(len(daily), 2)
+        self.assertEqual(daily[0]["temperature"], 22)
+        self.assertEqual(daily[0]["templow"], 11)
+        self.assertEqual(daily[1]["condition"], "pouring")
+
+    def test_empty_payload_safe(self):
+        mapped = ws.map_open_meteo({})
+        self.assertEqual(mapped["current"]["temperature_c"], None)
+        self.assertEqual(mapped["forecast"]["hourly"], [])
+        self.assertEqual(mapped["forecast"]["daily"], [])
+
+    def test_unknown_weather_code(self):
+        mapped = ws.map_open_meteo({"current": {"weather_code": 9999}})
+        self.assertEqual(mapped["current"]["condition"], "")
 
 
 class TestCalculateMetricsEndToEnd(unittest.TestCase):

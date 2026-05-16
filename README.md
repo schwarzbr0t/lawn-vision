@@ -57,7 +57,9 @@ Action states are `do_now`, `soon`, `wait`, `skip`, `off_season`. The
 
 Required:
 
-- A Home Assistant weather entity or a temperature sensor.
+- A Home Assistant weather entity, a temperature sensor, **or** the
+  built-in [Open-Meteo](https://open-meteo.com/) adapter (no API key
+  required, attribution: weather data by Open-Meteo).
 
 Optional but recommended:
 

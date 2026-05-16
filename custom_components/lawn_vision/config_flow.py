@@ -37,6 +37,7 @@ from .const import (
     CONF_RAIN_ENTITY,
     CONF_SOIL_TEMPERATURE_ENTITY,
     CONF_TEMPERATURE_ENTITY,
+    CONF_USE_OPEN_METEO,
     CONF_WEATHER_ENTITY,
     DEFAULT_AREA_M2,
     DEFAULT_GRASS_TYPE,
@@ -78,6 +79,10 @@ def _schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
             vol.Optional(
                 CONF_NAME, default=defaults.get(CONF_NAME, DEFAULT_NAME)
             ): str,
+            vol.Optional(
+                CONF_USE_OPEN_METEO,
+                default=defaults.get(CONF_USE_OPEN_METEO, False),
+            ): bool,
             vol.Optional(CONF_WEATHER_ENTITY, **entity_defaults[CONF_WEATHER_ENTITY]): EntitySelector(
                 EntitySelectorConfig(domain="weather")
             ),

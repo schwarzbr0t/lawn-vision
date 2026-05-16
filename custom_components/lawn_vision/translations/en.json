@@ -6,6 +6,7 @@
         "description": "Create a local lawn advisor from existing Home Assistant weather and garden entities.",
         "data": {
           "name": "Name",
+          "use_open_meteo": "Use Open-Meteo as weather source",
           "weather_entity": "Weather entity",
           "temperature_entity": "Temperature sensor",
           "mean_daily_temperature_entity": "Mean daily temperature",
@@ -44,6 +45,7 @@
         "title": "Lawn Vision options",
         "data": {
           "name": "Name",
+          "use_open_meteo": "Use Open-Meteo as weather source",
           "weather_entity": "Weather entity",
           "temperature_entity": "Temperature sensor",
           "mean_daily_temperature_entity": "Mean daily temperature",
