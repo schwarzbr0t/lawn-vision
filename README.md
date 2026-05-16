@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="custom_components/lawn_vision/brand/icon.png" alt="Lawn Vision" width="160" />
+</p>
+
 # Lawn Vision
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz)
