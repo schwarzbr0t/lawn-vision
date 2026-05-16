@@ -107,6 +107,7 @@ class LawnVisionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             update_interval=timedelta(minutes=15),
         )
         self.entry = entry
+        self.journal: dict[str, str | None] = {}
 
     @property
     def config(self) -> dict[str, Any]:
@@ -155,10 +156,10 @@ class LawnVisionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
 
         forecast = await self._async_get_forecast(config.get(CONF_WEATHER_ENTITY))
-        last_done = {
-            action: self._state_string(config.get(ACTION_LAST_DONE_KEYS[action]))
-            for action in CARE_ACTIONS
-        }
+        last_done: dict[str, str | None] = {}
+        for action in CARE_ACTIONS:
+            override = self._state_string(config.get(ACTION_LAST_DONE_KEYS[action]))
+            last_done[action] = override if override else self.journal.get(action)
         metrics = calculate_metrics(inputs, forecast, last_done, dt_util.now())
         metrics["inputs"] = {
             "temperature_c": inputs.temperature_c,

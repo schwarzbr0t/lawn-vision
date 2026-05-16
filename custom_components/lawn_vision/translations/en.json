@@ -69,6 +69,14 @@
     }
   },
   "entity": {
+    "date": {
+      "last_mow": {"name": "Last mow"},
+      "last_water": {"name": "Last watering"},
+      "last_fertilize": {"name": "Last fertilize"},
+      "last_scarify": {"name": "Last scarify"},
+      "last_aerate": {"name": "Last aerate"},
+      "last_overseed": {"name": "Last overseed"}
+    },
     "sensor": {
       "phase": {
         "name": "Phase"

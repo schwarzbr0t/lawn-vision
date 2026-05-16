@@ -72,17 +72,20 @@ Optional but recommended:
 - Lawn area
 - Grass type: cool-season or warm-season lawn
 
-For the care guide, optional `input_datetime` helpers tracking the last
-time each task was performed. Without them the integration still works,
-but annual tasks (scarify, aerate, overseed) are capped at `soon` on
-fresh installs:
+For the care guide, the integration ships native `date` entities that
+track when each task was last performed:
 
-- Last mow
-- Last watering
-- Last fertilize
-- Last scarify
-- Last aerate
-- Last overseed
+- `date.lawn_vision_last_mow`
+- `date.lawn_vision_last_water`
+- `date.lawn_vision_last_fertilize`
+- `date.lawn_vision_last_scarify`
+- `date.lawn_vision_last_aerate`
+- `date.lawn_vision_last_overseed`
+
+Update them from the UI or via the `date.set_value` service. The values
+persist across restarts. If you prefer an `input_datetime` helper, set
+its entity id in the options flow and it takes precedence over the
+native journal entity.
 
 ## Manual installation for development
 
