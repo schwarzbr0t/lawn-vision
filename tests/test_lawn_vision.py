@@ -280,6 +280,45 @@ class TestNextAction(unittest.TestCase):
         self.assertEqual(cc._next_action(actions), "none")
 
 
+class TestCarePlan7d(unittest.TestCase):
+    def test_empty_when_no_daily(self):
+        plan = cc._care_plan_7d({"hourly": [], "daily": []}, make_inputs(), NOW_MAY)
+        self.assertEqual(plan["days"], [])
+        self.assertEqual(plan["actionable"], 0)
+
+    def test_seven_days_returned(self):
+        daily = [
+            {"datetime": f"2026-05-{15 + i:02d}", "temperature": 21, "templow": 12, "precipitation": 0.2, "precipitation_probability": 15}
+            for i in range(10)
+        ]
+        plan = cc._care_plan_7d({"hourly": [], "daily": daily}, make_inputs(), NOW_MAY)
+        self.assertEqual(len(plan["days"]), 7)
+
+    def test_heat_day_flagged(self):
+        daily = [{"datetime": "2026-07-15", "temperature": 32, "templow": 22, "precipitation": 0, "precipitation_probability": 0}]
+        plan = cc._care_plan_7d({"hourly": [], "daily": daily}, make_inputs(), NOW_JUL)
+        self.assertEqual(plan["days"][0]["tone"], "warn")
+        self.assertEqual(plan["heat_days"], 1)
+        self.assertIn("Hitze", plan["days"][0]["hint"])
+
+    def test_rain_day_flagged(self):
+        daily = [{"datetime": "2026-05-15", "temperature": 18, "templow": 10, "precipitation": 8, "precipitation_probability": 80}]
+        plan = cc._care_plan_7d({"hourly": [], "daily": daily}, make_inputs(), NOW_MAY)
+        self.assertEqual(plan["rain_days"], 1)
+        self.assertEqual(plan["days"][0]["tone"], "muted")
+
+    def test_frost_day_flagged(self):
+        daily = [{"datetime": "2026-03-01", "temperature": 6, "templow": -1, "precipitation": 0, "precipitation_probability": 0}]
+        plan = cc._care_plan_7d({"hourly": [], "daily": daily}, make_inputs(), NOW_MAY)
+        self.assertIn("Frost", plan["days"][0]["hint"])
+
+    def test_mowing_day_flagged(self):
+        daily = [{"datetime": "2026-05-15", "temperature": 22, "templow": 12, "precipitation": 0, "precipitation_probability": 10}]
+        plan = cc._care_plan_7d({"hourly": [], "daily": daily}, make_inputs(), NOW_MAY)
+        self.assertEqual(plan["days"][0]["tone"], "good")
+        self.assertEqual(plan["actionable"], 1)
+
+
 class TestCalculateMetricsEndToEnd(unittest.TestCase):
     def test_happy_path_spring(self):
         inputs = make_inputs()
@@ -290,6 +329,8 @@ class TestCalculateMetricsEndToEnd(unittest.TestCase):
         self.assertIn(result["next_action"], ("mow", "water", "fertilize", "overseed", "scarify", "aerate", "none"))
         for action in cc.CARE_ACTIONS:
             self.assertIn(result[f"action_{action}"], result["actions"].values())
+        self.assertIn("care_plan_7d", result)
+        self.assertEqual(len(result["care_plan_7d"]["days"]), 7)
 
     def test_winter_off_season(self):
         inputs = make_inputs(temperature_c=2, mean_daily_temperature_c=1, soil_temperature_c=3)

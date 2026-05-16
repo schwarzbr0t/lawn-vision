@@ -82,6 +82,7 @@ SENSOR_ACTION_SCARIFY = "action_scarify"
 SENSOR_ACTION_AERATE = "action_aerate"
 SENSOR_ACTION_OVERSEED = "action_overseed"
 SENSOR_NEXT_ACTION = "next_action"
+SENSOR_CARE_PLAN_7D = "care_plan_7d"
 
 ACTION_SENSOR_KEYS = {
     ACTION_MOW: SENSOR_ACTION_MOW,

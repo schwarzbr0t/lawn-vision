@@ -63,6 +63,7 @@ from .const import (
     SENSOR_MOISTURE_10CM,
     SENSOR_MOISTURE_20CM,
     SENSOR_MOISTURE_30CM,
+    SENSOR_CARE_PLAN_7D,
     SENSOR_NEXT_ACTION,
     SENSOR_PHASE,
     SENSOR_RECOMMENDATION,
@@ -306,6 +307,7 @@ def calculate_metrics(
         rain_risk_24h=forecast_metrics.get(SENSOR_FORECAST_RAIN_RISK) or 0,
     )
     next_action = _next_action(actions)
+    care_plan_7d = _care_plan_7d(forecast_payload, inputs, now or dt_util.now())
 
     return {
         SENSOR_PHASE: phase,
@@ -324,6 +326,7 @@ def calculate_metrics(
         SENSOR_STRESS_LEVEL: stress,
         SENSOR_RECOMMENDATION: recommendation,
         SENSOR_NEXT_ACTION: next_action,
+        SENSOR_CARE_PLAN_7D: care_plan_7d,
         "actions": actions,
         **{ACTION_SENSOR_KEYS[action]: actions[action] for action in CARE_ACTIONS},
         **forecast_metrics,
@@ -1080,3 +1083,84 @@ def _next_action(actions: dict[str, dict[str, Any]]) -> str:
             if actions.get(action, {}).get("state") == target:
                 return action
     return "none"
+
+
+WEEKDAY_NAMES_DE: tuple[str, ...] = ("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
+
+
+def _care_plan_7d(
+    forecast: dict[str, list[dict[str, Any]]],
+    inputs: LawnInputs,
+    now: datetime,
+) -> dict[str, Any]:
+    """Build a per-day plan for the next 7 days from the daily forecast."""
+    daily = forecast.get("daily") or []
+    if not daily:
+        return {"days": [], "actionable": 0, "rain_days": 0, "heat_days": 0}
+
+    plan: list[dict[str, Any]] = []
+    for index, item in enumerate(daily[:7]):
+        date_str = str(item.get("datetime", ""))[:10]
+        try:
+            parsed = datetime.fromisoformat(date_str)
+            day_label = WEEKDAY_NAMES_DE[parsed.weekday()]
+        except (TypeError, ValueError):
+            parsed = now + timedelta(days=index)
+            date_str = parsed.date().isoformat()
+            day_label = "Heute" if index == 0 else WEEKDAY_NAMES_DE[parsed.weekday()]
+
+        temp_max = _forecast_number(item, "temperature")
+        temp_min = _forecast_number(item, "templow")
+        precip = _forecast_number(item, "precipitation", 0) or 0
+        rain_prob = _forecast_number(item, "precipitation_probability", 0) or 0
+        condition = str(item.get("condition", "")).lower()
+
+        hint, icon, tone = _care_plan_day_hint(
+            temp_max, temp_min, precip, rain_prob, condition, inputs.grass_type
+        )
+
+        plan.append({
+            "date": date_str,
+            "day": day_label,
+            "temp_max": _round_or_none(temp_max, 0),
+            "temp_min": _round_or_none(temp_min, 0),
+            "precipitation_mm": round(precip, 1),
+            "rain_probability": round(rain_prob),
+            "hint": hint,
+            "icon": icon,
+            "tone": tone,
+        })
+
+    actionable = sum(1 for d in plan if d["tone"] == "good")
+    rain_days = sum(1 for d in plan if d["icon"] == "mdi:weather-pouring")
+    heat_days = sum(1 for d in plan if d["icon"] == "mdi:weather-sunny-alert")
+    return {
+        "days": plan,
+        "actionable": actionable,
+        "rain_days": rain_days,
+        "heat_days": heat_days,
+    }
+
+
+def _care_plan_day_hint(
+    temp_max: float | None,
+    temp_min: float | None,
+    precip: float,
+    rain_prob: float,
+    condition: str,
+    grass_type: str,
+) -> tuple[str, str, str]:
+    if temp_min is not None and temp_min <= 2:
+        return ("Frost erwartet", "mdi:snowflake", "muted")
+    if temp_max is not None and temp_max >= 30:
+        return ("Hitze – bewaessern", "mdi:weather-sunny-alert", "warn")
+    if precip >= 5 or rain_prob >= 70 or condition in {"pouring", "rainy"}:
+        return ("Regen erwartet", "mdi:weather-pouring", "muted")
+    if temp_max is None:
+        return ("Wetter unbekannt", "mdi:weather-cloudy", "muted")
+    base = 10 if grass_type == GRASS_WARM_SEASON else 5
+    if temp_max < base + 4:
+        return ("Boden noch kuehl", "mdi:weather-fog", "muted")
+    if temp_max >= 18 and rain_prob < 40 and precip < 1:
+        return ("Maehfenster", "mdi:robot-mower", "good")
+    return ("Stabil", "mdi:weather-partly-cloudy", "neutral")

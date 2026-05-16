@@ -184,6 +184,9 @@
           "off_season": "Off season"
         }
       },
+      "care_plan_7d": {
+        "name": "Care plan 7 days"
+      },
       "next_action": {
         "name": "Next care action",
         "state": {

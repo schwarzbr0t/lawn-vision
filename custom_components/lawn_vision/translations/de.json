@@ -184,6 +184,9 @@
           "off_season": "Ausserhalb Saison"
         }
       },
+      "care_plan_7d": {
+        "name": "Pflegeplan 7 Tage"
+      },
       "next_action": {
         "name": "Naechste Pflegeaktion",
         "state": {

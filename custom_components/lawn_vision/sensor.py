@@ -40,6 +40,7 @@ from .const import (
     SENSOR_MOISTURE_10CM,
     SENSOR_MOISTURE_20CM,
     SENSOR_MOISTURE_30CM,
+    SENSOR_CARE_PLAN_7D,
     SENSOR_NEXT_ACTION,
     SENSOR_PHASE,
     SENSOR_RECOMMENDATION,
@@ -276,6 +277,17 @@ SENSORS: tuple[LawnVisionSensorDescription, ...] = (
         icon="mdi:lightbulb-on-outline",
         value_fn=lambda data: data.get(SENSOR_NEXT_ACTION),
         extra_fn=_next_action_extras,
+    ),
+    LawnVisionSensorDescription(
+        key=SENSOR_CARE_PLAN_7D,
+        translation_key=SENSOR_CARE_PLAN_7D,
+        icon="mdi:calendar-week-outline",
+        native_unit_of_measurement="d",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: (data.get(SENSOR_CARE_PLAN_7D) or {}).get("actionable"),
+        extra_fn=lambda data: {
+            k: v for k, v in (data.get(SENSOR_CARE_PLAN_7D) or {}).items() if k != "actionable"
+        },
     ),
 )
 
