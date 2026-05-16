@@ -29,3 +29,21 @@ jobs:
         run: |
           python3 -c "import json,sys,pathlib; [json.load(open(p)) for p in pathlib.Path('.').rglob('*.json') if '.git' not in p.parts]" \
             && echo "all JSON valid"
+
+  hassfest:
+    name: Hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run hassfest validation
+        uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    name: HACS validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: HACS validate (integration)
+        uses: hacs/action@main
+        with:
+          category: integration
