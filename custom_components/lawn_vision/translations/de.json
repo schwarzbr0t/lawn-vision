@@ -31,13 +31,13 @@
           "last_overseed_entity": "Letzte Nachsaat (input_datetime)"
         }
       }
-    },
-    "selector": {
-      "grass_type": {
-        "options": {
-          "cool_season": "Kuehle Rasengraeser",
-          "warm_season": "Warme Rasengraeser"
-        }
+    }
+  },
+  "selector": {
+    "grass_type": {
+      "options": {
+        "cool_season": "Kuehle Rasengraeser",
+        "warm_season": "Warme Rasengraeser"
       }
     }
   },
