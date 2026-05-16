@@ -25,13 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
       - name: Validate JSON manifests and translations
         run: |
           python3 -c "import json,sys,pathlib; [json.load(open(p)) for p in pathlib.Path('.').rglob('*.json') if '.git' not in p.parts]" \
             && echo "all JSON valid"
-      - name: Syntax-check dashboard card
-        run: |
-          node --check card/dist/lawn-vision.js

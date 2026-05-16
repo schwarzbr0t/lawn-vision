@@ -97,11 +97,14 @@ Copy the integration:
 cp -R custom_components/lawn_vision /config/custom_components/
 ```
 
-Copy the card:
+The dashboard card lives in a separate repository:
+[schwarzbr0t/lawn-vision-card](https://github.com/schwarzbr0t/lawn-vision-card).
+For manual install, follow its README; in short:
 
 ```bash
 mkdir -p /config/www/community/lawn-vision
-cp card/dist/lawn-vision.js /config/www/community/lawn-vision/lawn-vision.js
+curl -L -o /config/www/community/lawn-vision/lawn-vision.js \
+  https://raw.githubusercontent.com/schwarzbr0t/lawn-vision-card/main/dist/lawn-vision.js
 cp docs/rasen.png /config/www/community/lawn-vision/rasen.png
 ```
 
@@ -213,21 +216,14 @@ colors, opacity, blur, radii and text scale without editing YAML by hand.
 
 ## HACS packaging
 
-This repository is shaped as a **HACS custom integration**: the root
-`hacs.json` advertises the integration and HACS will pick up
-`custom_components/lawn_vision/` automatically when the repo is added
-as an *Integration* repository.
+This repository is a **HACS custom integration**: add it as an
+*Integration* custom repository in HACS and it will install the
+`lawn_vision` integration from `custom_components/`.
 
-The Lovelace dashboard card lives in [card/](card/) so it can be moved
-to its own repository (e.g. `schwarzbr0t/lawn-vision-card`) when the
-API stabilizes. Until then, install the card manually using
-[card/README.md](card/README.md) or as part of the manual install
-above.
-
-Splitting the card out is then mechanical: copy `card/` into a fresh
-repository, keep `card/dist/lawn-vision.js` at `dist/lawn-vision.js`
-in the new repo root, and HACS will detect it as a *Lovelace plugin*
-via the shipped `hacs.json`.
+The Lovelace dashboard card has its own repository:
+[schwarzbr0t/lawn-vision-card](https://github.com/schwarzbr0t/lawn-vision-card).
+Add that one as a *Lovelace plugin* custom repository in HACS to
+install the dashboard card.
 
 ## Calculation model
 
