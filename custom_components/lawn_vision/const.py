@@ -21,6 +21,8 @@ CONF_TEMPERATURE_ENTITY = "temperature_entity"
 CONF_WEATHER_ENTITY = "weather_entity"
 
 CONF_USE_OPEN_METEO = "use_open_meteo"
+CONF_LATITUDE = "latitude"
+CONF_LONGITUDE = "longitude"
 
 CONF_LAST_MOW_ENTITY = "last_mow_entity"
 CONF_LAST_WATER_ENTITY = "last_water_entity"

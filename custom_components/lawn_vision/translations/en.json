@@ -7,6 +7,8 @@
         "data": {
           "name": "Name",
           "use_open_meteo": "Use Open-Meteo as weather source",
+          "latitude": "Latitude (leave empty to use Home Assistant location)",
+          "longitude": "Longitude (leave empty to use Home Assistant location)",
           "weather_entity": "Weather entity",
           "temperature_entity": "Temperature sensor",
           "mean_daily_temperature_entity": "Mean daily temperature",
@@ -46,6 +48,8 @@
         "data": {
           "name": "Name",
           "use_open_meteo": "Use Open-Meteo as weather source",
+          "latitude": "Latitude (leave empty to use Home Assistant location)",
+          "longitude": "Longitude (leave empty to use Home Assistant location)",
           "weather_entity": "Weather entity",
           "temperature_entity": "Temperature sensor",
           "mean_daily_temperature_entity": "Mean daily temperature",

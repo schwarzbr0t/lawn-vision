@@ -42,6 +42,8 @@ from .const import (
     CONF_MOISTURE_30CM_ENTITY,
     CONF_RAIN_ENTITY,
     CONF_SOIL_TEMPERATURE_ENTITY,
+    CONF_LATITUDE,
+    CONF_LONGITUDE,
     CONF_TEMPERATURE_ENTITY,
     CONF_USE_OPEN_METEO,
     CONF_WEATHER_ENTITY,
@@ -123,11 +125,13 @@ class LawnVisionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         om_payload: dict[str, Any] | None = None
         if config.get(CONF_USE_OPEN_METEO):
-            om_payload = await fetch_open_meteo(
-                self.hass,
-                self.hass.config.latitude,
-                self.hass.config.longitude,
-            )
+            latitude = config.get(CONF_LATITUDE)
+            longitude = config.get(CONF_LONGITUDE)
+            if latitude is None:
+                latitude = self.hass.config.latitude
+            if longitude is None:
+                longitude = self.hass.config.longitude
+            om_payload = await fetch_open_meteo(self.hass, latitude, longitude)
         om_current = (om_payload or {}).get("current", {}) if om_payload else {}
 
         weather_temp = weather_state.attributes.get("temperature") if weather_state else None
@@ -180,8 +184,10 @@ class LawnVisionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         if om_payload and om_payload.get("forecast"):
             forecast = om_payload["forecast"]
+            weather_source = "open_meteo"
         else:
             forecast = await self._async_get_forecast(config.get(CONF_WEATHER_ENTITY))
+            weather_source = "weather_entity" if weather_state else "local"
         last_done: dict[str, str | None] = {}
         for action in CARE_ACTIONS:
             override = self._state_string(config.get(ACTION_LAST_DONE_KEYS[action]))
@@ -202,6 +208,7 @@ class LawnVisionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "condition": inputs.condition,
             "grass_type": inputs.grass_type,
             "area_m2": inputs.area_m2,
+            "weather_source": weather_source,
         }
         metrics["name"] = config.get(CONF_NAME, DEFAULT_NAME)
         return metrics

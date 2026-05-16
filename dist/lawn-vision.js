@@ -148,6 +148,7 @@ class LawnVisionCard extends HTMLElement {
       { depth: "30 cm", value: this.numberStateOrNull(this.config.entity_moisture_30cm) },
     ];
     const phase = this.textState(this.config.entity_phase, "unknown");
+    const weatherSource = this.attrState(this.config.entity_phase, "weather_source");
     const forecastRainRisk = this.numberStateOrNull(this.config.entity_forecast_rain_risk);
     const forecastWaterNeed = this.numberStateOrNull(this.config.entity_forecast_water_need);
     const forecastGrowthTrend = this.textState(this.config.entity_forecast_growth_trend, "unknown");
@@ -179,9 +180,17 @@ class LawnVisionCard extends HTMLElement {
             <span class="kicker">Rasenstatus</span>
             <h2>${this.escape(this.config.title)}</h2>
           </div>
-          <div class="phase-pill">
-            <ha-icon icon="${this.phaseIcon(phase)}"></ha-icon>
-            <span>${this.escape(this.phaseLabel(phase))}</span>
+          <div class="topline__right">
+            <div class="phase-pill">
+              <ha-icon icon="${this.phaseIcon(phase)}"></ha-icon>
+              <span>${this.escape(this.phaseLabel(phase))}</span>
+            </div>
+            ${weatherSource ? `
+              <span class="source-pill source-pill--${weatherSource}" title="Datenquelle">
+                <ha-icon icon="${this.sourceIcon(weatherSource)}"></ha-icon>
+                ${this.escape(this.sourceLabel(weatherSource))}
+              </span>
+            ` : ""}
           </div>
         </header>
 
@@ -505,6 +514,14 @@ class LawnVisionCard extends HTMLElement {
     return `${this.format(value, "0")} %`;
   }
 
+  attrState(entityId, key, fallback = null) {
+    if (!entityId || !this._hass?.states?.[entityId]) {
+      return fallback;
+    }
+    const value = this._hass.states[entityId].attributes?.[key];
+    return value === undefined || value === null ? fallback : value;
+  }
+
   actionInfo(entityId) {
     if (!entityId || !this._hass || !this._hass.states || !this._hass.states[entityId]) {
       return null;
@@ -675,6 +692,26 @@ class LawnVisionCard extends HTMLElement {
       return "--";
     }
     return this.format(value, digits);
+  }
+
+  sourceIcon(source) {
+    return (
+      {
+        open_meteo: "mdi:cloud-download-outline",
+        weather_entity: "mdi:weather-partly-cloudy",
+        local: "mdi:home-thermometer-outline",
+      }[source] || "mdi:weather-partly-cloudy"
+    );
+  }
+
+  sourceLabel(source) {
+    return (
+      {
+        open_meteo: "Open-Meteo",
+        weather_entity: "HA Wetter",
+        local: "Lokale Sensoren",
+      }[source] || ""
+    );
   }
 
   phaseLabel(phase) {
@@ -1846,6 +1883,36 @@ class LawnVisionCard extends HTMLElement {
       .lawn-vision__root[data-size="medium"] .care-plan-7d__grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
         grid-auto-flow: row;
+      }
+
+      .topline__right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .source-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: calc(var(--lv-kicker) * 1);
+        font-weight: 600;
+        background: rgba(255, 255, 255, .08);
+        color: rgba(255, 255, 255, .75);
+        white-space: nowrap;
+      }
+
+      .source-pill ha-icon {
+        --mdc-icon-size: calc(var(--lv-icon) * .85);
+      }
+
+      .source-pill--open_meteo {
+        background: rgba(70, 162, 255, .18);
+        color: #cfe4ff;
       }
     `;
   }

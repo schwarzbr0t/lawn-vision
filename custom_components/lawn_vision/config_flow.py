@@ -36,6 +36,8 @@ from .const import (
     CONF_MOISTURE_30CM_ENTITY,
     CONF_RAIN_ENTITY,
     CONF_SOIL_TEMPERATURE_ENTITY,
+    CONF_LATITUDE,
+    CONF_LONGITUDE,
     CONF_TEMPERATURE_ENTITY,
     CONF_USE_OPEN_METEO,
     CONF_WEATHER_ENTITY,
@@ -83,6 +85,14 @@ def _schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
                 CONF_USE_OPEN_METEO,
                 default=defaults.get(CONF_USE_OPEN_METEO, False),
             ): bool,
+            vol.Optional(
+                CONF_LATITUDE,
+                description={"suggested_value": defaults.get(CONF_LATITUDE)},
+            ): NumberSelector(NumberSelectorConfig(min=-90, max=90, step=0.0001, mode="box")),
+            vol.Optional(
+                CONF_LONGITUDE,
+                description={"suggested_value": defaults.get(CONF_LONGITUDE)},
+            ): NumberSelector(NumberSelectorConfig(min=-180, max=180, step=0.0001, mode="box")),
             vol.Optional(CONF_WEATHER_ENTITY, **entity_defaults[CONF_WEATHER_ENTITY]): EntitySelector(
                 EntitySelectorConfig(domain="weather")
             ),

@@ -7,6 +7,8 @@
         "data": {
           "name": "Name",
           "use_open_meteo": "Open-Meteo als Wetterquelle nutzen",
+          "latitude": "Breitengrad (leer = Home-Assistant-Standort)",
+          "longitude": "Laengengrad (leer = Home-Assistant-Standort)",
           "weather_entity": "Wetter-Entitaet",
           "temperature_entity": "Temperatursensor",
           "mean_daily_temperature_entity": "Mittlere Tagestemperatur",
@@ -46,6 +48,8 @@
         "data": {
           "name": "Name",
           "use_open_meteo": "Open-Meteo als Wetterquelle nutzen",
+          "latitude": "Breitengrad (leer = Home-Assistant-Standort)",
+          "longitude": "Laengengrad (leer = Home-Assistant-Standort)",
           "weather_entity": "Wetter-Entitaet",
           "temperature_entity": "Temperatursensor",
           "mean_daily_temperature_entity": "Mittlere Tagestemperatur",
