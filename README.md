@@ -9,6 +9,8 @@
 [![HACS Action](https://github.com/schwarzbr0t/lawn-vision/actions/workflows/tests.yml/badge.svg)](https://github.com/schwarzbr0t/lawn-vision/actions/workflows/tests.yml)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-kevinschwarz-ffdd00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/kevinschwarz)
 
+> ⚠️ **Disclaimer:** This project is "vibecoded" — built quickly and iteratively with heavy AI assistance. It has **not yet been thoroughly tested** in real-world Home Assistant deployments. Expect rough edges, breaking changes, and bugs. Use at your own risk and please report issues you run into. Contributions and test feedback are very welcome.
+
 Lawn Vision is a Home Assistant MVP for a more visual, decision-oriented lawn
 dashboard. It turns existing weather and garden entities into simple care
 signals: growth phase, growth score, mowing window, water need, stress level
