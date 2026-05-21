@@ -19,6 +19,7 @@ from homeassistant.helpers.selector import (
 
 from .const import (
     CONF_AREA_M2,
+    CONF_ESTIMATE_FROM_WEATHER,
     CONF_GDD_ENTITY,
     CONF_GRASS_TYPE,
     CONF_GTS_ENTITY,
@@ -84,6 +85,10 @@ def _schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
             vol.Optional(
                 CONF_USE_OPEN_METEO,
                 default=defaults.get(CONF_USE_OPEN_METEO, False),
+            ): bool,
+            vol.Optional(
+                CONF_ESTIMATE_FROM_WEATHER,
+                default=defaults.get(CONF_ESTIMATE_FROM_WEATHER, False),
             ): bool,
             vol.Optional(
                 CONF_LATITUDE,

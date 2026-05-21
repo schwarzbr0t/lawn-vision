@@ -7,6 +7,7 @@
         "data": {
           "name": "Name",
           "use_open_meteo": "Open-Meteo als Wetterquelle nutzen",
+          "estimate_from_weather": "Bodentemperatur & -feuchte aus Wetterdaten schaetzen (wenn kein Sensor vorhanden)",
           "latitude": "Breitengrad (leer = Home-Assistant-Standort)",
           "longitude": "Laengengrad (leer = Home-Assistant-Standort)",
           "weather_entity": "Wetter-Entitaet",
@@ -48,6 +49,7 @@
         "data": {
           "name": "Name",
           "use_open_meteo": "Open-Meteo als Wetterquelle nutzen",
+          "estimate_from_weather": "Bodentemperatur & -feuchte aus Wetterdaten schaetzen (wenn kein Sensor vorhanden)",
           "latitude": "Breitengrad (leer = Home-Assistant-Standort)",
           "longitude": "Laengengrad (leer = Home-Assistant-Standort)",
           "weather_entity": "Wetter-Entitaet",
@@ -85,7 +87,15 @@
     },
     "sensor": {
       "phase": {
-        "name": "Phase"
+        "name": "Phase",
+        "state": {
+          "dormant": "Ruhephase",
+          "stress": "Stress",
+          "dry": "Trocken",
+          "active_growth": "Aktives Wachstum",
+          "waking_up": "Wachstumsstart",
+          "slow_growth": "Langsames Wachstum"
+        }
       },
       "growth_score": {
         "name": "Wachstum"
@@ -130,7 +140,13 @@
         "name": "Prognose Wasserbedarf"
       },
       "forecast_growth_trend": {
-        "name": "Prognose Wachstumstrend"
+        "name": "Prognose Wachstumstrend",
+        "state": {
+          "rising": "Steigend",
+          "falling": "Fallend",
+          "stable": "Stabil",
+          "unknown": "Unbekannt"
+        }
       },
       "forecast_best_window": {
         "name": "Prognose Pflegefenster"

@@ -85,6 +85,32 @@ Optional but recommended:
 - Lawn area
 - Grass type: cool-season or warm-season lawn
 
+### Estimate soil values from weather
+
+If you do not have a soil temperature or soil moisture sensor, enable
+**"Estimate soil temperature & moisture from weather"** in the config /
+options flow. The integration then derives:
+
+- Soil temperature (≈ 10 cm depth) from air temperature with an
+  exponential lag that mimics the thermal buffering of the ground.
+- Soil moisture from a simple daily water balance: recent rain adds
+  moisture, evapotranspiration driven by air temperature and (inverse)
+  humidity subtracts from it.
+
+Estimated values are clamped to realistic bands and exposed with an
+`estimated: true` attribute on the corresponding sensor. A real sensor
+or an Open-Meteo soil value always wins over the estimate.
+
+### Languages
+
+The integration follows the Home Assistant UI language. German and
+English are bundled; entity names, enum states and config-flow labels
+translate automatically. Free-text states (recommendation, forecast
+care hint, action reason) are emitted in the active language **and**
+include stable machine-code attributes (`recommendation_code`,
+`reason_code`, `next_window_code`, …) so the Lovelace card and
+automations can localize them independently.
+
 For the care guide, the integration ships native `date` entities that
 track when each task was last performed:
 

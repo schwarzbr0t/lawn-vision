@@ -85,7 +85,9 @@ def _next_action_extras(data: dict[str, Any]) -> dict[str, Any]:
     return {
         "action": action_id,
         "next_window": info.get("next_window"),
+        "next_window_code": info.get("next_window_code"),
         "reason": info.get("reason"),
+        "reason_code": info.get("reason_code"),
         "days_since": info.get("days_since"),
         "cooldown_days": info.get("cooldown_days"),
     }
@@ -96,6 +98,15 @@ SENSORS: tuple[LawnVisionSensorDescription, ...] = (
         key=SENSOR_PHASE,
         translation_key=SENSOR_PHASE,
         icon="mdi:grass",
+        device_class=SensorDeviceClass.ENUM,
+        options=[
+            "dormant",
+            "stress",
+            "dry",
+            "active_growth",
+            "waking_up",
+            "slow_growth",
+        ],
         value_fn=lambda data: data.get(SENSOR_PHASE),
         extra_fn=lambda data: data.get("inputs", {}),
     ),
@@ -115,6 +126,9 @@ SENSORS: tuple[LawnVisionSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: data.get(SENSOR_SOIL_TEMPERATURE),
+        extra_fn=lambda data: {
+            "estimated": bool(data.get("inputs", {}).get("soil_temperature_estimated")),
+        },
     ),
     LawnVisionSensorDescription(
         key=SENSOR_MEAN_DAILY_TEMPERATURE,
@@ -194,6 +208,7 @@ SENSORS: tuple[LawnVisionSensorDescription, ...] = (
         translation_key=SENSOR_RECOMMENDATION,
         icon="mdi:clipboard-text-outline",
         value_fn=lambda data: data.get(SENSOR_RECOMMENDATION),
+        extra_fn=lambda data: {"code": data.get("recommendation_code")},
     ),
     LawnVisionSensorDescription(
         key=SENSOR_FORECAST_RAIN_RISK,
@@ -215,6 +230,8 @@ SENSORS: tuple[LawnVisionSensorDescription, ...] = (
         key=SENSOR_FORECAST_GROWTH_TREND,
         translation_key=SENSOR_FORECAST_GROWTH_TREND,
         icon="mdi:trending-up",
+        device_class=SensorDeviceClass.ENUM,
+        options=["rising", "falling", "stable", "unknown"],
         value_fn=lambda data: data.get(SENSOR_FORECAST_GROWTH_TREND),
     ),
     LawnVisionSensorDescription(
@@ -222,12 +239,14 @@ SENSORS: tuple[LawnVisionSensorDescription, ...] = (
         translation_key=SENSOR_FORECAST_BEST_WINDOW,
         icon="mdi:calendar-clock",
         value_fn=lambda data: data.get(SENSOR_FORECAST_BEST_WINDOW),
+        extra_fn=lambda data: {"code": data.get("forecast_best_window_code")},
     ),
     LawnVisionSensorDescription(
         key=SENSOR_FORECAST_CARE_HINT,
         translation_key=SENSOR_FORECAST_CARE_HINT,
         icon="mdi:calendar-check-outline",
         value_fn=lambda data: data.get(SENSOR_FORECAST_CARE_HINT),
+        extra_fn=lambda data: {"code": data.get("forecast_care_hint_code")},
     ),
     LawnVisionSensorDescription(
         key=SENSOR_ACTION_MOW,

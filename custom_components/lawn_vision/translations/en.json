@@ -7,6 +7,7 @@
         "data": {
           "name": "Name",
           "use_open_meteo": "Use Open-Meteo as weather source",
+          "estimate_from_weather": "Estimate soil temperature & moisture from weather (when no sensor is available)",
           "latitude": "Latitude (leave empty to use Home Assistant location)",
           "longitude": "Longitude (leave empty to use Home Assistant location)",
           "weather_entity": "Weather entity",
@@ -48,6 +49,7 @@
         "data": {
           "name": "Name",
           "use_open_meteo": "Use Open-Meteo as weather source",
+          "estimate_from_weather": "Estimate soil temperature & moisture from weather (when no sensor is available)",
           "latitude": "Latitude (leave empty to use Home Assistant location)",
           "longitude": "Longitude (leave empty to use Home Assistant location)",
           "weather_entity": "Weather entity",
@@ -85,7 +87,15 @@
     },
     "sensor": {
       "phase": {
-        "name": "Phase"
+        "name": "Phase",
+        "state": {
+          "dormant": "Dormant",
+          "stress": "Stress",
+          "dry": "Dry",
+          "active_growth": "Active growth",
+          "waking_up": "Waking up",
+          "slow_growth": "Slow growth"
+        }
       },
       "growth_score": {
         "name": "Growth score"
@@ -130,7 +140,13 @@
         "name": "Forecast water need"
       },
       "forecast_growth_trend": {
-        "name": "Forecast growth trend"
+        "name": "Forecast growth trend",
+        "state": {
+          "rising": "Rising",
+          "falling": "Falling",
+          "stable": "Stable",
+          "unknown": "Unknown"
+        }
       },
       "forecast_best_window": {
         "name": "Forecast care window"

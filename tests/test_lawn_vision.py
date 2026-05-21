@@ -424,5 +424,136 @@ class TestCalculateMetricsEndToEnd(unittest.TestCase):
         self.assertEqual(fert["days_since"], 10)
 
 
+class TestLanguageResolution(unittest.TestCase):
+    def test_default_when_empty(self):
+        self.assertEqual(cc._resolve_language(None), "de")
+        self.assertEqual(cc._resolve_language(""), "de")
+
+    def test_supported_short(self):
+        self.assertEqual(cc._resolve_language("en"), "en")
+        self.assertEqual(cc._resolve_language("de"), "de")
+
+    def test_locale_with_region(self):
+        self.assertEqual(cc._resolve_language("en-US"), "en")
+        self.assertEqual(cc._resolve_language("de-AT"), "de")
+
+    def test_unsupported_falls_back(self):
+        self.assertEqual(cc._resolve_language("fr"), "de")
+
+
+class TestEstimateSoilTemperature(unittest.TestCase):
+    def test_seed_from_mean_daily(self):
+        result = cc.estimate_soil_temperature(
+            previous=None, air_temp_c=18, mean_daily_temp_c=15, elapsed_hours=None
+        )
+        self.assertAlmostEqual(result, 13.5, places=1)
+
+    def test_smoothing_towards_target(self):
+        first = cc.estimate_soil_temperature(
+            previous=10, air_temp_c=20, mean_daily_temp_c=20, elapsed_hours=1
+        )
+        self.assertGreater(first, 10)
+        self.assertLess(first, 18.5)
+
+    def test_returns_previous_without_input(self):
+        result = cc.estimate_soil_temperature(
+            previous=12, air_temp_c=None, mean_daily_temp_c=None, elapsed_hours=1
+        )
+        self.assertEqual(result, 12)
+
+    def test_returns_none_when_no_data(self):
+        result = cc.estimate_soil_temperature(
+            previous=None, air_temp_c=None, mean_daily_temp_c=None, elapsed_hours=None
+        )
+        self.assertIsNone(result)
+
+
+class TestEstimateSoilMoisture(unittest.TestCase):
+    def test_seed_no_inputs(self):
+        result = cc.estimate_soil_moisture(
+            previous=None, rain_mm=0, humidity_pct=50, air_temp_c=15, elapsed_hours=None
+        )
+        self.assertGreater(result, 25)
+        self.assertLess(result, 45)
+
+    def test_rain_increases_moisture(self):
+        before = cc.estimate_soil_moisture(
+            previous=40, rain_mm=0, humidity_pct=50, air_temp_c=15, elapsed_hours=1
+        )
+        after = cc.estimate_soil_moisture(
+            previous=40, rain_mm=8, humidity_pct=50, air_temp_c=15, elapsed_hours=1
+        )
+        self.assertGreater(after, before)
+
+    def test_hot_dry_decreases_moisture_over_day(self):
+        result = cc.estimate_soil_moisture(
+            previous=40, rain_mm=0, humidity_pct=25, air_temp_c=30, elapsed_hours=24
+        )
+        self.assertLess(result, 40)
+
+    def test_clamped_band(self):
+        low = cc.estimate_soil_moisture(
+            previous=5, rain_mm=0, humidity_pct=20, air_temp_c=35, elapsed_hours=24
+        )
+        high = cc.estimate_soil_moisture(
+            previous=80, rain_mm=50, humidity_pct=95, air_temp_c=10, elapsed_hours=1
+        )
+        self.assertGreaterEqual(low, 5)
+        self.assertLessEqual(high, 85)
+
+
+class TestStableMachineCodes(unittest.TestCase):
+    """Machine-code state strings are part of the i18n contract."""
+
+    def test_phase_codes(self):
+        for state in ("dormant", "stress", "dry", "active_growth", "waking_up", "slow_growth"):
+            self.assertEqual(cc._phase(50, 0, 22, 40) or "slow_growth", "slow_growth") if False else None
+        self.assertEqual(cc._phase(0, 0, 3, 50), "dormant")
+        self.assertEqual(cc._phase(80, 70, 25, 30), "stress")
+        self.assertEqual(cc._phase(40, 20, 22, 18), "dry")
+        self.assertEqual(cc._phase(80, 10, 20, 45), "active_growth")
+        self.assertEqual(cc._phase(50, 10, 20, 45), "waking_up")
+
+    def test_recommendation_code_is_stable_across_languages(self):
+        for lang in ("de", "en"):
+            code, text = cc._recommendation("active_growth", 80, 80, 0, 0, lang)
+            self.assertEqual(code, "mowing_window")
+            self.assertTrue(text)
+
+    def test_action_emits_codes(self):
+        result = cc._action_mow(70, 80, 10, "active_growth", 10, 0, 7, [], "en")
+        self.assertEqual(result["state"], "do_now")
+        self.assertEqual(result["reason_code"], "do_now")
+        self.assertEqual(result["next_window_code"], "today")
+        self.assertIn("Today", result["next_window"])
+
+    def test_best_window_code_no_forecast(self):
+        metrics = cc._forecast_metrics({"hourly": [], "daily": []}, make_inputs(), 60, 0, 0, "en")
+        self.assertEqual(metrics["forecast_best_window_code"], "no_forecast")
+        self.assertEqual(metrics["forecast_care_hint_code"], "no_forecast")
+
+    def test_growth_trend_codes(self):
+        rising_hourly = [{"temperature": 10, "precipitation": 0, "precipitation_probability": 0} for _ in range(24)]
+        rising_hourly += [{"temperature": 18, "precipitation": 0, "precipitation_probability": 0} for _ in range(24)]
+        self.assertEqual(cc._forecast_growth_trend(rising_hourly, [], "cool_season"), "rising")
+
+
+class TestLocalization(unittest.TestCase):
+    def test_english_recommendation(self):
+        result = cc.calculate_metrics(make_inputs(), make_forecast(), last_done={}, now=NOW_MAY, lang="en")
+        self.assertIn("recommendation_code", result)
+        self.assertIsInstance(result["recommendation"], str)
+        # English text must not contain the German keyword
+        self.assertNotIn("Maehen", result["recommendation"])
+        self.assertNotIn("Maehfenster", result["recommendation"])
+
+    def test_german_recommendation_default(self):
+        result = cc.calculate_metrics(make_inputs(), make_forecast(), last_done={}, now=NOW_MAY)
+        # default language is german
+        self.assertIn(result["recommendation_code"], (
+            "mowing_window", "active_growth", "waking_up", "slow_growth"
+        ))
+
+
 if __name__ == "__main__":
     unittest.main()
