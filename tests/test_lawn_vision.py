@@ -8,12 +8,14 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 for _mod in (
+    "aiohttp",
     "homeassistant",
     "homeassistant.config_entries",
     "homeassistant.const",
     "homeassistant.core",
     "homeassistant.exceptions",
     "homeassistant.helpers",
+    "homeassistant.helpers.aiohttp_client",
     "homeassistant.helpers.update_coordinator",
     "homeassistant.util",
     "homeassistant.util.dt",
@@ -114,7 +116,8 @@ class TestPureHelpers(unittest.TestCase):
         self.assertEqual(cc._next_window_label(3, ((4, 5),)), "April")
 
     def test_next_window_label_next_year(self):
-        self.assertIn("naechstes Jahr", cc._next_window_label(10, ((4, 5),)))
+        self.assertIn("naechstes Jahr", cc._next_window_label(10, ((4, 5),), lang="de"))
+        self.assertIn("next year", cc._next_window_label(10, ((4, 5),), lang="en"))
 
     def test_days_since_state_none(self):
         self.assertIsNone(cc._days_since_state(None, NOW_MAY))
@@ -134,6 +137,17 @@ class TestPureHelpers(unittest.TestCase):
         result = cc._days_since_state("2026-06-01", NOW_MAY)
         self.assertEqual(result, 0)
 
+    def test_days_since_state_date_string_is_tz_safe(self):
+        # A date-only string must compare as a calendar day; otherwise the
+        # naive-midnight + local-tz conversion drifts by a day for users
+        # in negative UTC offsets.
+        from datetime import timezone, timedelta
+
+        hawaii = timezone(timedelta(hours=-10))
+        now = datetime(2026, 5, 15, 0, 30, tzinfo=hawaii)
+        result = cc._days_since_state("2026-05-14", now)
+        self.assertEqual(result, 1)
+
 
 class TestActionHeuristics(unittest.TestCase):
     def test_mow_skip_when_dormant(self):
@@ -145,7 +159,7 @@ class TestActionHeuristics(unittest.TestCase):
         self.assertEqual(r["state"], "skip")
 
     def test_mow_wait_recent_mow(self):
-        r = cc._action_mow(70, 80, 10, "active_growth", 10, 0, 1, [])
+        r = cc._action_mow(70, 80, 10, "active_growth", 10, 0, 1, [], lang="de")
         self.assertEqual(r["state"], "wait")
         self.assertIn("Tag", r["reason"])
 
@@ -238,7 +252,7 @@ class TestConflictResolver(unittest.TestCase):
             cc.ACTION_OVERSEED: {"state": "wait", "next_window": "", "reason": "", "days_since": 30, "cooldown_days": 60},
         }
         last_done = {k: "2025-05-01" for k in actions}
-        result = cc._resolve_conflicts(dict(actions), last_done)
+        result = cc._resolve_conflicts(dict(actions), last_done, lang="de")
         self.assertEqual(result[cc.ACTION_SCARIFY]["state"], "do_now")
         self.assertEqual(result[cc.ACTION_FERTILIZE]["state"], "soon")
         self.assertIn("vertikutieren", result[cc.ACTION_FERTILIZE]["reason"].lower())
@@ -254,7 +268,7 @@ class TestConflictResolver(unittest.TestCase):
             cc.ACTION_OVERSEED: {"state": "do_now", "next_window": "Diese Woche", "reason": "go", "days_since": 100, "cooldown_days": 60},
         }
         last_done = {k: "2025-05-01" for k in actions}
-        result = cc._resolve_conflicts(dict(actions), last_done)
+        result = cc._resolve_conflicts(dict(actions), last_done, lang="de")
         self.assertIn("Starterduenger", result[cc.ACTION_FERTILIZE]["reason"])
 
 
@@ -297,7 +311,7 @@ class TestCarePlan7d(unittest.TestCase):
 
     def test_heat_day_flagged(self):
         daily = [{"datetime": "2026-07-15", "temperature": 32, "templow": 22, "precipitation": 0, "precipitation_probability": 0}]
-        plan = cc._care_plan_7d({"hourly": [], "daily": daily}, make_inputs(), NOW_JUL)
+        plan = cc._care_plan_7d({"hourly": [], "daily": daily}, make_inputs(), NOW_JUL, lang="de")
         self.assertEqual(plan["days"][0]["tone"], "warn")
         self.assertEqual(plan["heat_days"], 1)
         self.assertIn("Hitze", plan["days"][0]["hint"])
@@ -423,11 +437,45 @@ class TestCalculateMetricsEndToEnd(unittest.TestCase):
         self.assertEqual(fert["state"], "wait")
         self.assertEqual(fert["days_since"], 10)
 
+    def test_forecast_slots_present(self):
+        inputs = make_inputs()
+        result = cc.calculate_metrics(inputs, make_forecast(), last_done={}, now=NOW_MAY)
+        for key in ("forecast_slot_24h", "forecast_slot_48h", "forecast_slot_3d"):
+            self.assertIn(key, result)
+            slot = result[key]
+            for field in ("hours", "rain_pct", "suitability", "action_code", "growth_code", "stress_code"):
+                self.assertIn(field, slot)
+            self.assertIn(slot["action_code"], (
+                "mow_possible", "observe", "wait", "wait_rain", "stress_recovery",
+            ))
+            self.assertGreaterEqual(slot["suitability"], 0)
+            self.assertLessEqual(slot["suitability"], 100)
+
+    def test_forecast_slot_wait_rain_when_high_probability(self):
+        inputs = make_inputs()
+        result = cc.calculate_metrics(
+            inputs, make_forecast(rain_mm=2.0, rain_prob=80), last_done={}, now=NOW_MAY
+        )
+        codes = {result[f"forecast_slot_{tag}"]["action_code"] for tag in ("24h", "48h", "3d")}
+        self.assertIn("wait_rain", codes)
+
+    def test_recommendation_reasons_shape(self):
+        inputs = make_inputs()
+        result = cc.calculate_metrics(inputs, make_forecast(), last_done={}, now=NOW_MAY)
+        self.assertIn("recommendation_reasons", result)
+        reasons = result["recommendation_reasons"]
+        self.assertGreaterEqual(len(reasons), 4)
+        for entry in reasons:
+            self.assertIn("code", entry)
+            self.assertIn("label", entry)
+            self.assertIn("ok", entry)
+
 
 class TestLanguageResolution(unittest.TestCase):
     def test_default_when_empty(self):
-        self.assertEqual(cc._resolve_language(None), "de")
-        self.assertEqual(cc._resolve_language(""), "de")
+        # English is the international fallback when HA locale is unset.
+        self.assertEqual(cc._resolve_language(None), "en")
+        self.assertEqual(cc._resolve_language(""), "en")
 
     def test_supported_short(self):
         self.assertEqual(cc._resolve_language("en"), "en")
@@ -438,7 +486,8 @@ class TestLanguageResolution(unittest.TestCase):
         self.assertEqual(cc._resolve_language("de-AT"), "de")
 
     def test_unsupported_falls_back(self):
-        self.assertEqual(cc._resolve_language("fr"), "de")
+        # Unsupported locales (fr, es, …) fall back to English, not German.
+        self.assertEqual(cc._resolve_language("fr"), "en")
 
 
 class TestEstimateSoilTemperature(unittest.TestCase):

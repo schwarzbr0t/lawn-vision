@@ -8,7 +8,14 @@ Attribution: https://open-meteo.com/
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+import aiohttp
+
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
 
 LOGGER = logging.getLogger(__name__)
 
@@ -56,12 +63,9 @@ WEATHER_CODE_MAP: dict[int, str] = {
 
 
 async def fetch_open_meteo(
-    hass, latitude: float, longitude: float
+    hass: "HomeAssistant", latitude: float, longitude: float
 ) -> dict[str, Any] | None:
     """Fetch current + forecast data from Open-Meteo and map it to Lawn Vision shape."""
-    import aiohttp
-    from homeassistant.helpers.aiohttp_client import async_get_clientsession
-
     params = {"latitude": latitude, "longitude": longitude, **OPEN_METEO_PARAMS}
 
     session = async_get_clientsession(hass)

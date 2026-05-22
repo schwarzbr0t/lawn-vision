@@ -1,0 +1,243 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Lawn Vision",
+        "description": "Create a local lawn advisor from existing Home Assistant weather and garden entities.",
+        "data": {
+          "name": "Name",
+          "use_open_meteo": "Use Open-Meteo as weather source",
+          "estimate_from_weather": "Estimate soil temperature & moisture from weather (when no sensor is available)",
+          "latitude": "Latitude (leave empty to use Home Assistant location)",
+          "longitude": "Longitude (leave empty to use Home Assistant location)",
+          "weather_entity": "Weather entity",
+          "temperature_entity": "Temperature sensor",
+          "mean_daily_temperature_entity": "Mean daily temperature",
+          "soil_temperature_entity": "Soil temperature",
+          "humidity_entity": "Humidity sensor",
+          "moisture_entity": "Soil moisture sensor",
+          "moisture_10cm_entity": "Soil moisture 10 cm",
+          "moisture_20cm_entity": "Soil moisture 20 cm",
+          "moisture_30cm_entity": "Soil moisture 30 cm",
+          "rain_entity": "Rain sensor",
+          "grassland_temperature_sum_entity": "Grassland temperature sum",
+          "gdd_entity": "Growing Degree Days",
+          "area_m2": "Lawn area in m2",
+          "grass_type": "Grass type",
+          "last_mow_entity": "Last mow (input_datetime)",
+          "last_water_entity": "Last watering (input_datetime)",
+          "last_fertilize_entity": "Last fertilize (input_datetime)",
+          "last_scarify_entity": "Last scarify (input_datetime)",
+          "last_aerate_entity": "Last aerate (input_datetime)",
+          "last_overseed_entity": "Last overseed (input_datetime)"
+        }
+      }
+    }
+  },
+  "selector": {
+    "grass_type": {
+      "options": {
+        "cool_season": "Cool-season lawn",
+        "warm_season": "Warm-season lawn"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Lawn Vision options",
+        "data": {
+          "name": "Name",
+          "use_open_meteo": "Use Open-Meteo as weather source",
+          "estimate_from_weather": "Estimate soil temperature & moisture from weather (when no sensor is available)",
+          "latitude": "Latitude (leave empty to use Home Assistant location)",
+          "longitude": "Longitude (leave empty to use Home Assistant location)",
+          "weather_entity": "Weather entity",
+          "temperature_entity": "Temperature sensor",
+          "mean_daily_temperature_entity": "Mean daily temperature",
+          "soil_temperature_entity": "Soil temperature",
+          "humidity_entity": "Humidity sensor",
+          "moisture_entity": "Soil moisture sensor",
+          "moisture_10cm_entity": "Soil moisture 10 cm",
+          "moisture_20cm_entity": "Soil moisture 20 cm",
+          "moisture_30cm_entity": "Soil moisture 30 cm",
+          "rain_entity": "Rain sensor",
+          "grassland_temperature_sum_entity": "Grassland temperature sum",
+          "gdd_entity": "Growing Degree Days",
+          "area_m2": "Lawn area in m2",
+          "grass_type": "Grass type",
+          "last_mow_entity": "Last mow (input_datetime)",
+          "last_water_entity": "Last watering (input_datetime)",
+          "last_fertilize_entity": "Last fertilize (input_datetime)",
+          "last_scarify_entity": "Last scarify (input_datetime)",
+          "last_aerate_entity": "Last aerate (input_datetime)",
+          "last_overseed_entity": "Last overseed (input_datetime)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "date": {
+      "last_mow": {"name": "Last mow"},
+      "last_water": {"name": "Last watering"},
+      "last_fertilize": {"name": "Last fertilize"},
+      "last_scarify": {"name": "Last scarify"},
+      "last_aerate": {"name": "Last aerate"},
+      "last_overseed": {"name": "Last overseed"}
+    },
+    "sensor": {
+      "phase": {
+        "name": "Phase",
+        "state": {
+          "dormant": "Dormant",
+          "stress": "Stress",
+          "dry": "Dry",
+          "active_growth": "Active growth",
+          "waking_up": "Waking up",
+          "slow_growth": "Slow growth"
+        }
+      },
+      "growth_score": {
+        "name": "Growth score"
+      },
+      "soil_temperature": {
+        "name": "Soil temperature"
+      },
+      "mean_daily_temperature": {
+        "name": "Mean daily temperature"
+      },
+      "grassland_temperature_sum": {
+        "name": "Grassland temperature sum"
+      },
+      "growing_degree_days": {
+        "name": "Growing Degree Days"
+      },
+      "moisture_10cm": {
+        "name": "Soil moisture 10 cm"
+      },
+      "moisture_20cm": {
+        "name": "Soil moisture 20 cm"
+      },
+      "moisture_30cm": {
+        "name": "Soil moisture 30 cm"
+      },
+      "mowing_condition": {
+        "name": "Mowing condition"
+      },
+      "water_need": {
+        "name": "Water need"
+      },
+      "stress_level": {
+        "name": "Stress level"
+      },
+      "recommendation": {
+        "name": "Recommendation"
+      },
+      "forecast_rain_risk": {
+        "name": "Forecast rain risk"
+      },
+      "forecast_water_need": {
+        "name": "Forecast water need"
+      },
+      "forecast_growth_trend": {
+        "name": "Forecast growth trend",
+        "state": {
+          "rising": "Rising",
+          "falling": "Falling",
+          "stable": "Stable",
+          "unknown": "Unknown"
+        }
+      },
+      "forecast_best_window": {
+        "name": "Forecast care window"
+      },
+      "forecast_care_hint": {
+        "name": "Forecast care hint"
+      },
+      "forecast_slot_24h": {
+        "name": "Forecast +24h"
+      },
+      "forecast_slot_48h": {
+        "name": "Forecast +48h"
+      },
+      "forecast_slot_3d": {
+        "name": "Forecast +3d"
+      },
+      "action_mow": {
+        "name": "Care: Mow",
+        "state": {
+          "do_now": "Now",
+          "soon": "Soon",
+          "wait": "Wait",
+          "skip": "Not recommended",
+          "off_season": "Off season"
+        }
+      },
+      "action_water": {
+        "name": "Care: Water",
+        "state": {
+          "do_now": "Now",
+          "soon": "Soon",
+          "wait": "Wait",
+          "skip": "Not recommended",
+          "off_season": "Off season"
+        }
+      },
+      "action_fertilize": {
+        "name": "Care: Fertilize",
+        "state": {
+          "do_now": "Now",
+          "soon": "Soon",
+          "wait": "Wait",
+          "skip": "Not recommended",
+          "off_season": "Off season"
+        }
+      },
+      "action_scarify": {
+        "name": "Care: Scarify",
+        "state": {
+          "do_now": "Now",
+          "soon": "Soon",
+          "wait": "Wait",
+          "skip": "Not recommended",
+          "off_season": "Off season"
+        }
+      },
+      "action_aerate": {
+        "name": "Care: Aerate",
+        "state": {
+          "do_now": "Now",
+          "soon": "Soon",
+          "wait": "Wait",
+          "skip": "Not recommended",
+          "off_season": "Off season"
+        }
+      },
+      "action_overseed": {
+        "name": "Care: Overseed",
+        "state": {
+          "do_now": "Now",
+          "soon": "Soon",
+          "wait": "Wait",
+          "skip": "Not recommended",
+          "off_season": "Off season"
+        }
+      },
+      "care_plan_7d": {
+        "name": "Care plan 7 days"
+      },
+      "next_action": {
+        "name": "Next care action",
+        "state": {
+          "mow": "Mow",
+          "water": "Water",
+          "fertilize": "Fertilize",
+          "scarify": "Scarify",
+          "aerate": "Aerate",
+          "overseed": "Overseed",
+          "none": "Observe"
+        }
+      }
+    }
+  }
+}

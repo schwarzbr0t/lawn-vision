@@ -197,15 +197,11 @@ class LawnVisionConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Create the options flow."""
-        return LawnVisionOptionsFlow(config_entry)
+        return LawnVisionOptionsFlow()
 
 
 class LawnVisionOptionsFlow(config_entries.OptionsFlow):
     """Handle Lawn Vision options."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
-        self._config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -214,5 +210,5 @@ class LawnVisionOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        defaults = {**self._config_entry.data, **self._config_entry.options}
+        defaults = {**self.config_entry.data, **self.config_entry.options}
         return self.async_show_form(step_id="init", data_schema=_schema(defaults))
