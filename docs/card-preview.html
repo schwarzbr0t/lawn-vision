@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lawn Vision Card · Preview</title>
+  <style>
+    body { margin: 0; padding: 24px; background: #04090c; display: grid; place-items: center; }
+    lawn-vision-card { width: 960px; display: block; }
+  </style>
+</head>
+<body>
+  <lawn-vision-card id="card"></lawn-vision-card>
+
+  <script type="module">
+    // load the actual card module
+    await import("../custom_components/lawn_vision/www/lawn-vision-card.js");
+
+    // Build a fake hass that the card reads from
+    const now = Date.now();
+    const series = (n, start, end, jitter) => {
+      const out = [];
+      for (let i = 0; i < n; i++) {
+        const t = now - (n - 1 - i) * 86400 * 1000;
+        const base = start + (end - start) * (i / Math.max(1, n - 1));
+        const v = base + (Math.random() - 0.5) * jitter;
+        out.push({ lu: t / 1000, s: Math.max(0, v) });
+      }
+      return out;
+    };
+
+    const fakeHass = {
+      states: {
+        "sensor.lawn_vision_phase": { state: "slow_growth", attributes: {} },
+        "sensor.lawn_vision_growth_score": { state: "18", attributes: {} },
+        "sensor.lawn_vision_soil_temperature": { state: "14", attributes: {} },
+        "sensor.lawn_vision_mean_daily_temperature": { state: "18", attributes: {} },
+        "sensor.lawn_vision_grassland_temperature_sum": { state: "126", attributes: {} },
+        "sensor.lawn_vision_growing_degree_days": { state: "214.6", attributes: {} },
+        "sensor.lawn_vision_moisture_10cm": { state: "0.23", attributes: {} },
+        "sensor.lawn_vision_moisture_20cm": { state: "0.28", attributes: {} },
+        "sensor.lawn_vision_moisture_30cm": { state: "0.31", attributes: {} },
+        "sensor.lawn_vision_mowing_condition": { state: "55", attributes: {} },
+        "sensor.lawn_vision_water_need": { state: "4.2", attributes: {} },
+        "sensor.lawn_vision_stress_level": { state: "18", attributes: {} },
+        "sensor.lawn_vision_recommendation": {
+          state: "Heute nicht mähen. Regen in 48h abwarten. Nächstes sinnvolles Pflegefenster: Freitag 16:00-20:00.",
+          attributes: {
+            code: "slow_growth",
+            reasons: [
+              { code: "growth_moderate", label: "Wachstum noch moderat", ok: true },
+              { code: "rain_rising", label: "Regenwahrscheinlichkeit steigt", ok: true },
+              { code: "stress_low", label: "Stress niedrig", ok: true },
+              { code: "moisture_ok", label: "Bodenfeuchte ausreichend", ok: true },
+            ],
+          },
+        },
+        "sensor.lawn_vision_forecast_slot_24h": {
+          state: "58",
+          attributes: {
+            hours: 24, rain_pct: 20, rain_mm: 0.1, temp_c: 19,
+            action_code: "observe", action_label: "Beobachten",
+            growth_code: "slight", growth_label: "leicht",
+            stress_code: "low", stress_label: "niedrig",
+          },
+        },
+        "sensor.lawn_vision_forecast_slot_48h": {
+          state: "31",
+          attributes: {
+            hours: 48, rain_pct: 62, rain_mm: 4.8, temp_c: 16,
+            action_code: "wait_rain", action_label: "Regen abwarten",
+            growth_code: "rising", growth_label: "steigend",
+            stress_code: "mid", stress_label: "mittel",
+          },
+        },
+        "sensor.lawn_vision_forecast_slot_3d": {
+          state: "84",
+          attributes: {
+            hours: 72, rain_pct: 15, rain_mm: 0.4, temp_c: 20,
+            action_code: "mow_possible", action_label: "Mähen möglich",
+            growth_code: "stable", growth_label: "stabil",
+            stress_code: "mid", stress_label: "mittel",
+          },
+        },
+      },
+      callWS: async () => ({
+        "sensor.lawn_vision_growth_score": series(14, 6, 18, 4),
+        "sensor.lawn_vision_water_need": series(14, 1, 4, 6),
+        "sensor.lawn_vision_stress_level": series(14, 30, 18, 18),
+      }),
+    };
+
+    const card = document.getElementById("card");
+    card.setConfig({});
+    card.hass = fakeHass;
+  </script>
+</body>
+</html>

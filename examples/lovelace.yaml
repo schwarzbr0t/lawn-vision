@@ -1,28 +1,6 @@
 type: custom:lawn-vision-card
 title: Lawn Vision
-background_image: /local/community/lawn-vision/rasen.png
-background_position: center
-background_size: cover
-layout: auto
-size: normal
-show_agro: true
-show_forecast: true
-show_timeline: true
-show_recommendation: true
-show_care_guide: true
-visual:
-  density: normal
-  accent_color: "#42d65d"
-  water_color: "#46a2ff"
-  warning_color: "#f4b72f"
-  card_radius: 16
-  section_radius: 12
-  overlay_opacity: 0.78
-  vignette_opacity: 0.16
-  panel_opacity: 0.76
-  blur: 16
-  text_scale: 1
-  min_height: 0
+history_days: 14
 entity_phase: sensor.lawn_vision_phase
 entity_growth: sensor.lawn_vision_growth_score
 entity_soil_temperature: sensor.lawn_vision_soil_temperature
@@ -38,13 +16,6 @@ entity_stress: sensor.lawn_vision_stress_level
 entity_recommendation: sensor.lawn_vision_recommendation
 entity_forecast_rain_risk: sensor.lawn_vision_forecast_rain_risk
 entity_forecast_water_need: sensor.lawn_vision_forecast_water_need
-entity_forecast_growth_trend: sensor.lawn_vision_forecast_growth_trend
-entity_forecast_best_window: sensor.lawn_vision_forecast_best_window
-entity_forecast_care_hint: sensor.lawn_vision_forecast_care_hint
-entity_action_mow: sensor.lawn_vision_action_mow
-entity_action_water: sensor.lawn_vision_action_water
-entity_action_fertilize: sensor.lawn_vision_action_fertilize
-entity_action_scarify: sensor.lawn_vision_action_scarify
-entity_action_aerate: sensor.lawn_vision_action_aerate
-entity_action_overseed: sensor.lawn_vision_action_overseed
-entity_next_action: sensor.lawn_vision_next_action
+entity_forecast_slot_24h: sensor.lawn_vision_forecast_slot_24h
+entity_forecast_slot_48h: sensor.lawn_vision_forecast_slot_48h
+entity_forecast_slot_3d: sensor.lawn_vision_forecast_slot_3d
