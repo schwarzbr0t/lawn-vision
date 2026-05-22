@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lawn Vision Dashboard</title>
+  <style>
+    :root {
+      --bg: #071113;
+      --panel: rgba(9, 31, 35, 0.82);
+      --panel-soft: rgba(18, 48, 42, 0.72);
+      --panel-green: rgba(42, 75, 42, 0.82);
+      --line: rgba(151, 184, 180, 0.18);
+      --line-strong: rgba(169, 214, 139, 0.28);
+      --text: #f4f7f2;
+      --muted: #aeb9bc;
+      --muted-2: #778489;
+      --green: #a7d84f;
+      --green-soft: #7fac3e;
+      --yellow: #f2d33c;
+      --blue: #58b7f5;
+      --danger: #ff654f;
+      --shadow: rgba(0, 0, 0, 0.42);
+      --radius-lg: 28px;
+      --radius-md: 18px;
+      --radius-sm: 12px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 72% 8%, rgba(151, 192, 72, 0.24), transparent 34%),
+        radial-gradient(circle at 18% 18%, rgba(32, 73, 52, 0.34), transparent 30%),
+        linear-gradient(180deg, #091217 0%, #03090d 100%);
+      display: grid;
+      place-items: center;
+      padding: 28px;
+    }
+
+    .dashboard {
+      width: min(960px, 100%);
+      min-height: 1600px;
+      border-radius: 32px;
+      padding: 34px;
+      background:
+        radial-gradient(circle at 76% 5%, rgba(142, 175, 64, 0.22), transparent 38%),
+        radial-gradient(circle at 16% 18%, rgba(47, 91, 63, 0.25), transparent 36%),
+        linear-gradient(160deg, rgba(20, 47, 39, 0.92), rgba(2, 17, 22, 0.96) 54%, rgba(3, 16, 20, 0.98));
+      border: 1px solid rgba(147, 180, 160, 0.22);
+      box-shadow: 0 32px 90px var(--shadow), inset 0 0 0 1px rgba(255,255,255,0.02);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dashboard::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.025), transparent);
+      pointer-events: none;
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: flex-start;
+      margin-bottom: 42px;
+    }
+
+    .eyebrow {
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      font-size: 23px;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 46px;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      padding: 19px 31px;
+      min-width: 315px;
+      justify-content: center;
+      border-radius: 999px;
+      background: rgba(110, 132, 91, 0.42);
+      border: 2px solid rgba(221, 239, 202, 0.18);
+      color: #e7ecd9;
+      font-weight: 800;
+      font-size: 21px;
+      box-shadow: inset 0 1px 18px rgba(255,255,255,0.04);
+    }
+
+    .status-pill svg {
+      color: var(--green);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 210px 1fr;
+      gap: 54px;
+      align-items: center;
+      margin-bottom: 26px;
+    }
+
+    .gauge {
+      width: 202px;
+      height: 202px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: conic-gradient(var(--green) 0deg 68deg, rgba(136, 159, 137, 0.32) 68deg 360deg);
+      position: relative;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.34), inset 0 0 0 1px rgba(255,255,255,0.04);
+    }
+
+    .gauge::before {
+      content: "";
+      width: 156px;
+      height: 156px;
+      border-radius: 50%;
+      background: #07161c;
+      box-shadow: inset 0 18px 34px rgba(0,0,0,0.38);
+      position: absolute;
+    }
+
+    .gauge-value {
+      position: relative;
+      text-align: center;
+      font-weight: 900;
+    }
+
+    .gauge-value strong {
+      display: block;
+      font-size: 72px;
+      line-height: 0.92;
+      letter-spacing: -0.06em;
+    }
+
+    .gauge-value span {
+      display: block;
+      margin-top: 10px;
+      font-size: 25px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .hero h2 {
+      margin: 0 0 17px;
+      font-size: 43px;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 560px;
+      color: #c4cbcc;
+      font-size: 26px;
+      line-height: 1.38;
+      font-weight: 700;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .card,
+    .metrics,
+    .history,
+    .moisture,
+    .forecast,
+    .recommendation {
+      background: linear-gradient(160deg, rgba(8, 34, 39, 0.88), rgba(8, 23, 27, 0.88));
+      border: 2px solid var(--line);
+      border-radius: var(--radius-md);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.025), 0 18px 30px rgba(0,0,0,0.14);
+    }
+
+    .card {
+      min-height: 190px;
+      padding: 26px 25px;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: var(--muted);
+      font-size: 18px;
+      font-weight: 900;
+      margin-bottom: 22px;
+      text-transform: uppercase;
+    }
+
+    .card-head svg {
+      width: 36px;
+      height: 36px;
+    }
+
+    .card-value {
+      font-size: 33px;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      margin-bottom: 10px;
+    }
+
+    .card-copy {
+      color: #c0c8ca;
+      font-size: 22px;
+      line-height: 1.25;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      overflow: hidden;
+      margin-bottom: 18px;
+      border-radius: 20px;
+    }
+
+    .metric {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 24px 27px;
+      min-height: 100px;
+      border-right: 1px solid rgba(170, 201, 197, 0.16);
+    }
+
+    .metric:last-child {
+      border-right: 0;
+    }
+
+    .metric svg {
+      color: var(--green);
+      flex: 0 0 auto;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .metric-value {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .section-title h3 {
+      margin: 0;
+      font-size: 27px;
+      letter-spacing: -0.03em;
+    }
+
+    .tabs {
+      display: inline-grid;
+      grid-template-columns: repeat(3, 1fr);
+      width: 282px;
+      border-radius: 12px;
+      border: 1px solid rgba(180, 201, 195, 0.14);
+      overflow: hidden;
+      background: rgba(255,255,255,0.025);
+    }
+
+    .tab {
+      padding: 10px 0;
+      text-align: center;
+      color: var(--muted);
+      font-weight: 900;
+      font-size: 17px;
+    }
+
+    .tab.active {
+      background: rgba(139, 169, 87, 0.62);
+      color: #f7f9ef;
+      box-shadow: inset 0 0 20px rgba(255,255,255,0.06);
+    }
+
+    .history {
+      padding: 22px 24px 14px;
+      margin-bottom: 16px;
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      border: 1px solid rgba(172, 196, 191, 0.13);
+      border-radius: 16px;
+      overflow: hidden;
+      background: rgba(4, 21, 24, 0.42);
+    }
+
+    .chart-card {
+      padding: 20px 16px 14px;
+      border-right: 1px solid rgba(172, 196, 191, 0.13);
+      min-height: 190px;
+    }
+
+    .chart-card:last-child {
+      border-right: 0;
+    }
+
+    .chart-label {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .chart-label strong {
+      font-size: 19px;
+      color: var(--green);
+    }
+
+    .chart-label .blue {
+      color: var(--blue);
+    }
+
+    .chart-label .yellow {
+      color: var(--yellow);
+    }
+
+    .chart-label span {
+      display: block;
+      color: var(--muted);
+      font-size: 15px;
+      margin-top: 2px;
+    }
+
+    .mini-chart {
+      width: 100%;
+      height: 112px;
+      overflow: visible;
+    }
+
+    .axis-label {
+      font-size: 12px;
+      fill: var(--muted);
+    }
+
+    .grid-line {
+      stroke: rgba(174, 185, 188, 0.12);
+      stroke-width: 1;
+    }
+
+    .moisture {
+      padding: 20px 24px 21px;
+      margin-bottom: 16px;
+    }
+
+    .moisture .section-title {
+      margin-bottom: 10px;
+    }
+
+    .unit {
+      color: var(--muted-2);
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .moisture-row {
+      display: grid;
+      grid-template-columns: 80px 1fr 56px;
+      gap: 20px;
+      align-items: center;
+      min-height: 38px;
+      color: #dbe3e3;
+      font-weight: 800;
+      font-size: 18px;
+    }
+
+    .bar {
+      height: 15px;
+      border-radius: 999px;
+      background: rgba(172, 190, 188, 0.18);
+      overflow: hidden;
+    }
+
+    .bar span {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), rgba(159, 204, 86, 0.78));
+      border-radius: inherit;
+      box-shadow: 0 0 24px rgba(160, 214, 79, 0.2);
+    }
+
+    .forecast {
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    .forecast h3 {
+      margin: 0 0 6px;
+      font-size: 26px;
+      letter-spacing: -0.03em;
+    }
+
+    .forecast-subline {
+      margin: 0 0 22px;
+      color: var(--muted);
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .outlook-timeline {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      padding-top: 34px;
+    }
+
+    .outlook-timeline::before {
+      content: "";
+      position: absolute;
+      top: 48px;
+      left: 16%;
+      right: 16%;
+      height: 4px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(167,216,79,0.42), rgba(88,183,245,0.48), rgba(167,216,79,0.82));
+      box-shadow: 0 0 24px rgba(167,216,79,0.14);
+    }
+
+    .outlook-step {
+      position: relative;
+      min-height: 255px;
+      padding: 34px 16px 17px;
+      border-radius: 16px;
+      background: linear-gradient(160deg, rgba(11, 39, 43, 0.78), rgba(7, 24, 29, 0.78));
+      border: 1px solid rgba(174, 196, 190, 0.16);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.025);
+    }
+
+    .outlook-step.active {
+      border-color: rgba(167,216,79,0.42);
+      background: linear-gradient(160deg, rgba(31, 62, 43, 0.86), rgba(8, 31, 35, 0.86));
+    }
+
+    .outlook-node {
+      position: absolute;
+      top: -3px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #07161c;
+      border: 4px solid rgba(167,216,79,0.78);
+      box-shadow: 0 0 0 7px rgba(167,216,79,0.1), 0 0 26px rgba(167,216,79,0.22);
+      z-index: 2;
+    }
+
+    .outlook-step.rain .outlook-node {
+      border-color: rgba(88,183,245,0.86);
+      box-shadow: 0 0 0 7px rgba(88,183,245,0.1), 0 0 26px rgba(88,183,245,0.2);
+    }
+
+    .outlook-step.wait .outlook-node {
+      border-color: rgba(242,211,60,0.86);
+      box-shadow: 0 0 0 7px rgba(242,211,60,0.1), 0 0 26px rgba(242,211,60,0.2);
+    }
+
+    .outlook-time {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .outlook-time strong {
+      font-size: 24px;
+      letter-spacing: -0.03em;
+    }
+
+    .outlook-action {
+      min-height: 58px;
+      margin-bottom: 16px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid rgba(180, 199, 195, 0.09);
+    }
+
+    .outlook-action span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .outlook-action b {
+      display: block;
+      color: var(--text);
+      font-size: 20px;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+    }
+
+    .signal-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .signal {
+      display: grid;
+      grid-template-columns: 20px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      color: #cad4d4;
+      font-size: 15px;
+    }
+
+    .signal b {
+      color: #f4f6ee;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .signal .green { color: var(--green); }
+    .signal .blue { color: var(--blue); }
+    .signal .yellow { color: var(--yellow); }
+    .signal .danger { color: var(--danger); }
+
+    .outlook-score {
+      margin-top: 14px;
+      padding-top: 13px;
+      border-top: 1px solid rgba(180, 199, 195, 0.09);
+    }
+
+    .score-label {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+
+    .score-track {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(172, 190, 188, 0.15);
+      overflow: hidden;
+    }
+
+    .score-track span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, rgba(167,216,79,0.55), var(--green));
+    }
+
+    .recommendation {
+      display: grid;
+      grid-template-columns: 104px 1fr;
+      gap: 24px;
+      padding: 28px 25px 24px;
+      background: linear-gradient(160deg, rgba(45, 79, 43, 0.92), rgba(20, 54, 35, 0.88));
+      border-color: var(--line-strong);
+    }
+
+    .recommendation-icon {
+      width: 92px;
+      height: 92px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(136, 180, 75, 0.28);
+      border: 1px solid rgba(190, 223, 112, 0.28);
+      color: var(--green);
+      box-shadow: inset 0 0 26px rgba(255,255,255,0.05), 0 12px 30px rgba(0,0,0,0.18);
+    }
+
+    .recommendation h3 {
+      margin: 0 0 7px;
+      font-size: 29px;
+      letter-spacing: -0.03em;
+    }
+
+    .recommendation p {
+      margin: 0;
+      color: #e0e5df;
+      font-size: 22px;
+      line-height: 1.3;
+    }
+
+    .why {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(180, 221, 93, 0.35);
+      display: grid;
+      grid-template-columns: 94px 1fr 1fr;
+      gap: 12px 24px;
+      align-items: start;
+    }
+
+    .why-title {
+      color: var(--green);
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    .reason {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      color: #e2e8df;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .reason svg {
+      color: var(--green);
+      flex: 0 0 auto;
+    }
+
+    svg {
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    @media (max-width: 760px) {
+      body {
+        padding: 0;
+        background: #071113;
+      }
+
+      .dashboard {
+        width: 100%;
+        min-height: 100vh;
+        border-radius: 0;
+        padding: 22px;
+      }
+
+      .header,
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      .header {
+        flex-direction: column;
+        margin-bottom: 24px;
+      }
+
+      .status-pill {
+        min-width: 0;
+        width: 100%;
+      }
+
+      .hero {
+        gap: 24px;
+      }
+
+      .cards,
+      .forecast-grid,
+      .chart-grid,
+      .metrics,
+      .outlook-timeline {
+        grid-template-columns: 1fr;
+      }
+
+      .outlook-timeline::before {
+        display: none;
+      }
+
+      .chart-card,
+      .metric {
+        border-right: 0;
+        border-bottom: 1px solid rgba(172, 196, 191, 0.13);
+      }
+
+      .chart-card:last-child,
+      .metric:last-child {
+        border-bottom: 0;
+      }
+
+      .recommendation,
+      .why {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="dashboard" aria-label="Lawn Vision Dashboard">
+    <div class="content">
+      <header class="header">
+        <div>
+          <div class="eyebrow">RASENSTATUS</div>
+          <h1>Lawn Vision</h1>
+        </div>
+        <div class="status-pill">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 21V8"/><path d="M5 21h14"/><path d="M12 14c-4.5 0-7-2.8-7-7 4.5 0 7 2.8 7 7Z"/><path d="M12 11c4.5 0 7-2.8 7-7-4.5 0-7 2.8-7 7Z"/></svg>
+          Langsames Wachstum
+        </div>
+      </header>
+
+      <section class="hero">
+        <div class="gauge">
+          <div class="gauge-value">
+            <strong>18</strong>
+            <span>%</span>
+          </div>
+        </div>
+        <div>
+          <h2>Langsam aufbauen</h2>
+          <p>Wachstum zieht an, Mähen voraussichtlich in 2 Tagen sinnvoll.</p>
+        </div>
+      </section>
+
+      <section class="cards" aria-label="Zusammenfassung">
+        <article class="card">
+          <div class="card-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--yellow)" stroke-width="2.2"><path d="M3 20c9-1 15-7 18-17C11 5 4 10 3 20Z"/><path d="M3 20c5-6 10-9 16-12"/></svg>
+            MAEHEN
+          </div>
+          <div class="card-value">In 2 Tagen</div>
+          <div class="card-copy">Wachstum noch<br />moderat.</div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.2"><path d="M12 3s7 8 7 13a7 7 0 0 1-14 0c0-5 7-13 7-13Z"/></svg>
+            WASSER
+          </div>
+          <div class="card-value">4.2 mm / 48h</div>
+          <div class="card-copy">Regen wahrscheinlich.</div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.2"><path d="M12 3 20 6v6c0 5-3.4 8.2-8 9-4.6-.8-8-4-8-9V6l8-3Z"/></svg>
+            STRESS
+          </div>
+          <div class="card-value">18 %</div>
+          <div class="card-copy">Niedrige Belastung.</div>
+        </article>
+      </section>
+
+      <section class="metrics" aria-label="Metriken">
+        <div class="metric">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 14.76V5a4 4 0 0 0-8 0v9.76a6 6 0 1 0 8 0Z"/><path d="M10 5v11"/><path d="M18 7h2M18 11h3M18 15h2"/></svg>
+          <div><div class="metric-label">Boden</div><div class="metric-value">14 °C</div></div>
+        </div>
+        <div class="metric">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 14.76V5a4 4 0 0 0-8 0v9.76a6 6 0 1 0 8 0Z"/><path d="M10 5v11"/></svg>
+          <div><div class="metric-label">Tagesmittel</div><div class="metric-value">18 °C</div></div>
+        </div>
+        <div class="metric">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 4H8l6 8-6 8h10"/></svg>
+          <div><div class="metric-label">GTS</div><div class="metric-value">126 K</div></div>
+        </div>
+        <div class="metric">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 20V5"/><path d="M4 20h17"/><path d="M7 17c3-8 7-10 12-10"/><path d="M16 7h3v3"/></svg>
+          <div><div class="metric-label">GDD</div><div class="metric-value">214.6</div></div>
+        </div>
+      </section>
+
+      <section class="history" aria-label="Verlauf">
+        <div class="section-title">
+          <h3>Verlauf 14 Tage</h3>
+          <div class="tabs"><span class="tab">7T</span><span class="tab active">14T</span><span class="tab">30T</span></div>
+        </div>
+
+        <div class="chart-grid">
+          <article class="chart-card">
+            <div class="chart-label">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.2"><path d="M3 20c9-1 15-7 18-17C11 5 4 10 3 20Z"/><path d="M3 20c5-6 10-9 16-12"/></svg>
+              <div><strong>Wachstum</strong><span>letzte 14 Tage</span></div>
+            </div>
+            <svg class="mini-chart" viewBox="0 0 250 120">
+              <line class="grid-line" x1="45" y1="25" x2="240" y2="25"/><line class="grid-line" x1="45" y1="58" x2="240" y2="58"/><line class="grid-line" x1="45" y1="90" x2="240" y2="90"/>
+              <text class="axis-label" x="0" y="30">hoch</text><text class="axis-label" x="0" y="63">mittel</text><text class="axis-label" x="0" y="95">niedrig</text>
+              <path d="M50 94 L66 91 L82 88 L98 80 L114 84 L130 66 L146 70 L162 62 L178 48 L194 42 L210 40 L232 32" fill="none" stroke="var(--green)" stroke-width="4"/>
+              <path d="M50 94 L66 91 L82 88 L98 80 L114 84 L130 66 L146 70 L162 62 L178 48 L194 42 L210 40 L232 32 L232 103 L50 103Z" fill="rgba(167,216,79,0.13)"/>
+              <g fill="var(--green)"><circle cx="50" cy="94" r="4"/><circle cx="66" cy="91" r="4"/><circle cx="82" cy="88" r="4"/><circle cx="98" cy="80" r="4"/><circle cx="114" cy="84" r="4"/><circle cx="130" cy="66" r="4"/><circle cx="146" cy="70" r="4"/><circle cx="162" cy="62" r="4"/><circle cx="178" cy="48" r="4"/><circle cx="194" cy="42" r="4"/><circle cx="210" cy="40" r="4"/><circle cx="232" cy="32" r="4"/></g>
+              <text class="axis-label" x="45" y="118">-14T</text><text class="axis-label" x="205" y="118">Heute</text>
+            </svg>
+          </article>
+
+          <article class="chart-card">
+            <div class="chart-label">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.2"><path d="M12 3s7 8 7 13a7 7 0 0 1-14 0c0-5 7-13 7-13Z"/></svg>
+              <div><strong class="blue">Wasser</strong><span>letzte 14 Tage</span></div>
+            </div>
+            <svg class="mini-chart" viewBox="0 0 250 120">
+              <line class="grid-line" x1="22" y1="25" x2="240" y2="25"/><line class="grid-line" x1="22" y1="58" x2="240" y2="58"/><line class="grid-line" x1="22" y1="90" x2="240" y2="90"/>
+              <g fill="var(--blue)">
+                <rect x="28" y="58" width="9" height="42" rx="3"/><rect x="48" y="84" width="9" height="16" rx="3"/><rect x="68" y="80" width="9" height="20" rx="3"/><rect x="88" y="68" width="9" height="32" rx="3"/>
+                <rect x="108" y="76" width="9" height="24" rx="3"/><rect x="128" y="50" width="9" height="50" rx="3"/><rect x="148" y="88" width="9" height="12" rx="3"/><rect x="168" y="76" width="9" height="24" rx="3"/>
+                <rect x="188" y="34" width="9" height="66" rx="3"/><rect x="208" y="70" width="9" height="30" rx="3"/><rect x="228" y="50" width="9" height="50" rx="3"/>
+              </g>
+              <text class="axis-label" x="22" y="118">-14T</text><text class="axis-label" x="202" y="118">Heute</text>
+            </svg>
+          </article>
+
+          <article class="chart-card">
+            <div class="chart-label">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--yellow)" stroke-width="2.2"><path d="M12 3 20 6v6c0 5-3.4 8.2-8 9-4.6-.8-8-4-8-9V6l8-3Z"/></svg>
+              <div><strong class="yellow">Stress</strong><span>letzte 14 Tage</span></div>
+            </div>
+            <svg class="mini-chart" viewBox="0 0 250 120">
+              <line class="grid-line" x1="45" y1="25" x2="240" y2="25"/><line class="grid-line" x1="45" y1="58" x2="240" y2="58"/><line class="grid-line" x1="45" y1="90" x2="240" y2="90"/>
+              <text class="axis-label" x="0" y="30">hoch</text><text class="axis-label" x="0" y="63">mittel</text><text class="axis-label" x="0" y="95">niedrig</text>
+              <path d="M50 88 L68 74 L86 89 L104 88 L122 76 L140 85 L158 70 L176 82 L194 72 L212 86 L235 88" fill="none" stroke="var(--yellow)" stroke-width="4"/>
+              <path d="M50 88 L68 74 L86 89 L104 88 L122 76 L140 85 L158 70 L176 82 L194 72 L212 86 L235 88 L235 103 L50 103Z" fill="rgba(242,211,60,0.12)"/>
+              <text class="axis-label" x="45" y="118">-14T</text><text class="axis-label" x="205" y="118">Heute</text>
+            </svg>
+          </article>
+        </div>
+      </section>
+
+      <section class="moisture" aria-label="Bodenfeuchte">
+        <div class="section-title">
+          <h3>Bodenfeuchte</h3>
+          <span class="unit">Volumen m3/m3</span>
+        </div>
+        <div class="moisture-row"><span>10 cm</span><div class="bar"><span style="width: 53%"></span></div><span>0.23</span></div>
+        <div class="moisture-row"><span>20 cm</span><div class="bar"><span style="width: 62%"></span></div><span>0.28</span></div>
+        <div class="moisture-row"><span>30 cm</span><div class="bar"><span style="width: 71%"></span></div><span>0.31</span></div>
+      </section>
+
+      <section class="forecast" aria-label="Ausblick">
+        <h3>Ausblick</h3>
+        <p class="forecast-subline">Kombinierte Zeitachse aus Wetter, Wachstum und empfohlener Aktion.</p>
+
+        <div class="outlook-timeline">
+          <article class="outlook-step">
+            <span class="outlook-node"></span>
+            <div class="outlook-time">
+              <strong>+24h</strong>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d6e8f7" stroke-width="2"><path d="M12 3v2M5.6 5.6 7 7M3 12h2M18.4 5.6 17 7"/><path d="M17.5 19H8a5 5 0 1 1 .5-9.97A6 6 0 0 1 20 11a4 4 0 0 1-2.5 8Z"/></svg>
+            </div>
+            <div class="outlook-action"><span>Aktion</span><b>Beobachten</b></div>
+            <div class="signal-list">
+              <div class="signal"><span class="green">▥</span><span>Wuchs</span><b>leicht</b></div>
+              <div class="signal"><span class="blue">♢</span><span>Regen</span><b>20 %</b></div>
+              <div class="signal"><span class="yellow">♢</span><span>Stress</span><b>niedrig</b></div>
+            </div>
+            <div class="outlook-score"><div class="score-label"><span>Eignung</span><b>58</b></div><div class="score-track"><span style="width: 58%"></span></div></div>
+          </article>
+
+          <article class="outlook-step rain">
+            <span class="outlook-node"></span>
+            <div class="outlook-time">
+              <strong>+48h</strong>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c4d2df" stroke-width="2"><path d="M17.5 15H8a5 5 0 1 1 .5-9.97A6 6 0 0 1 20 7.5 4 4 0 0 1 17.5 15Z"/><path d="M8 19v1M12 19v1M16 19v1" stroke="var(--blue)"/></svg>
+            </div>
+            <div class="outlook-action"><span>Aktion</span><b>Regen abwarten</b></div>
+            <div class="signal-list">
+              <div class="signal"><span class="green">▥</span><span>Wuchs</span><b>steigend</b></div>
+              <div class="signal"><span class="blue">♢</span><span>Regen</span><b>62 %</b></div>
+              <div class="signal"><span class="yellow">♢</span><span>Stress</span><b>mittel</b></div>
+            </div>
+            <div class="outlook-score"><div class="score-label"><span>Eignung</span><b>31</b></div><div class="score-track"><span style="width: 31%"></span></div></div>
+          </article>
+
+          <article class="outlook-step active">
+            <span class="outlook-node"></span>
+            <div class="outlook-time">
+              <strong>+3T</strong>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d6e8f7" stroke-width="2"><path d="M12 3v2M5.6 5.6 7 7M3 12h2M18.4 5.6 17 7"/><path d="M17.5 19H8a5 5 0 1 1 .5-9.97A6 6 0 0 1 20 11a4 4 0 0 1-2.5 8Z"/></svg>
+            </div>
+            <div class="outlook-action"><span>Aktion</span><b>Mähen möglich</b></div>
+            <div class="signal-list">
+              <div class="signal"><span class="green">▥</span><span>Wuchs</span><b>stabil</b></div>
+              <div class="signal"><span class="blue">♢</span><span>Regen</span><b>15 %</b></div>
+              <div class="signal"><span class="yellow">♢</span><span>Stress</span><b>mittel</b></div>
+            </div>
+            <div class="outlook-score"><div class="score-label"><span>Eignung</span><b>84</b></div><div class="score-track"><span style="width: 84%"></span></div></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="recommendation" aria-label="Empfehlung">
+        <div class="recommendation-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M8 4h8l1 3H7l1-3Z"/><path d="M7 6H5v15h14V6h-2"/><path d="M8 12h8M8 16h5"/></svg>
+        </div>
+        <div>
+          <h3>Empfehlung</h3>
+          <p>Heute nicht mähen. Regen in 48h abwarten.<br />Nächster sinnvoller Zeitpunkt zum Mähen: Freitag 16:00-20:00.</p>
+          <div class="why">
+            <div class="why-title">Warum?</div>
+            <div>
+              <div class="reason"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg>Wachstum noch moderat</div>
+              <div class="reason"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg>Regenwahrscheinlichkeit steigt</div>
+            </div>
+            <div>
+              <div class="reason"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg>Stress niedrig</div>
+              <div class="reason"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg>Bodenfeuchte ausreichend</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
