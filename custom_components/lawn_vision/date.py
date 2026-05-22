@@ -10,6 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     ACTION_AERATE,
@@ -45,7 +46,9 @@ async def async_setup_entry(
     )
 
 
-class LawnJournalDate(DateEntity, RestoreEntity):
+class LawnJournalDate(
+    CoordinatorEntity[LawnVisionCoordinator], DateEntity, RestoreEntity
+):
     """A writable date entity that records when a care action was last done."""
 
     _attr_has_entity_name = True
@@ -58,7 +61,7 @@ class LawnJournalDate(DateEntity, RestoreEntity):
         action: str,
         slug: str,
     ) -> None:
-        self._coordinator = coordinator
+        super().__init__(coordinator)
         self._entry = entry
         self.action = action
         self._slug = slug
@@ -84,8 +87,8 @@ class LawnJournalDate(DateEntity, RestoreEntity):
     async def async_set_value(self, value: date_cls) -> None:
         self._value = value
         self.async_write_ha_state()
-        self._coordinator.journal[self.action] = value.isoformat()
-        await self._coordinator.async_request_refresh()
+        self.coordinator.journal[self.action] = value.isoformat()
+        await self.coordinator.async_request_refresh()
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -93,6 +96,6 @@ class LawnJournalDate(DateEntity, RestoreEntity):
         if last_state and last_state.state not in (None, "unknown", "unavailable", ""):
             try:
                 self._value = date_cls.fromisoformat(last_state.state)
-                self._coordinator.journal[self.action] = last_state.state
+                self.coordinator.journal[self.action] = last_state.state
             except ValueError:
                 pass

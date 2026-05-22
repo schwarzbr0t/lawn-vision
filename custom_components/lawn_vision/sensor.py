@@ -20,6 +20,11 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
+    ACTION_STATE_DO_NOW,
+    ACTION_STATE_OFF_SEASON,
+    ACTION_STATE_SKIP,
+    ACTION_STATE_SOON,
+    ACTION_STATE_WAIT,
     DOMAIN,
     SENSOR_ACTION_AERATE,
     SENSOR_ACTION_FERTILIZE,
@@ -31,6 +36,9 @@ from .const import (
     SENSOR_FORECAST_CARE_HINT,
     SENSOR_FORECAST_GROWTH_TREND,
     SENSOR_FORECAST_RAIN_RISK,
+    SENSOR_FORECAST_SLOT_24H,
+    SENSOR_FORECAST_SLOT_48H,
+    SENSOR_FORECAST_SLOT_3D,
     SENSOR_FORECAST_WATER_NEED,
     SENSOR_GROWTH_SCORE,
     SENSOR_GROWING_DEGREE_DAYS,
@@ -75,6 +83,25 @@ def _action_extras(key: str) -> Callable[[dict[str, Any]], dict[str, Any]]:
         return {k: v for k, v in info.items() if k != "state"}
 
     return _value
+
+
+ACTION_STATE_OPTIONS: list[str] = [
+    ACTION_STATE_DO_NOW,
+    ACTION_STATE_SOON,
+    ACTION_STATE_WAIT,
+    ACTION_STATE_SKIP,
+    ACTION_STATE_OFF_SEASON,
+]
+
+NEXT_ACTION_OPTIONS: list[str] = [
+    "mow",
+    "water",
+    "fertilize",
+    "scarify",
+    "aerate",
+    "overseed",
+    "none",
+]
 
 
 def _next_action_extras(data: dict[str, Any]) -> dict[str, Any]:
@@ -208,7 +235,10 @@ SENSORS: tuple[LawnVisionSensorDescription, ...] = (
         translation_key=SENSOR_RECOMMENDATION,
         icon="mdi:clipboard-text-outline",
         value_fn=lambda data: data.get(SENSOR_RECOMMENDATION),
-        extra_fn=lambda data: {"code": data.get("recommendation_code")},
+        extra_fn=lambda data: {
+            "code": data.get("recommendation_code"),
+            "reasons": data.get("recommendation_reasons", []),
+        },
     ),
     LawnVisionSensorDescription(
         key=SENSOR_FORECAST_RAIN_RISK,
@@ -249,9 +279,44 @@ SENSORS: tuple[LawnVisionSensorDescription, ...] = (
         extra_fn=lambda data: {"code": data.get("forecast_care_hint_code")},
     ),
     LawnVisionSensorDescription(
+        key=SENSOR_FORECAST_SLOT_24H,
+        translation_key=SENSOR_FORECAST_SLOT_24H,
+        icon="mdi:clock-outline",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: (data.get(SENSOR_FORECAST_SLOT_24H) or {}).get("suitability"),
+        extra_fn=lambda data: {
+            k: v for k, v in (data.get(SENSOR_FORECAST_SLOT_24H) or {}).items() if k != "suitability"
+        },
+    ),
+    LawnVisionSensorDescription(
+        key=SENSOR_FORECAST_SLOT_48H,
+        translation_key=SENSOR_FORECAST_SLOT_48H,
+        icon="mdi:clock-outline",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: (data.get(SENSOR_FORECAST_SLOT_48H) or {}).get("suitability"),
+        extra_fn=lambda data: {
+            k: v for k, v in (data.get(SENSOR_FORECAST_SLOT_48H) or {}).items() if k != "suitability"
+        },
+    ),
+    LawnVisionSensorDescription(
+        key=SENSOR_FORECAST_SLOT_3D,
+        translation_key=SENSOR_FORECAST_SLOT_3D,
+        icon="mdi:clock-outline",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: (data.get(SENSOR_FORECAST_SLOT_3D) or {}).get("suitability"),
+        extra_fn=lambda data: {
+            k: v for k, v in (data.get(SENSOR_FORECAST_SLOT_3D) or {}).items() if k != "suitability"
+        },
+    ),
+    LawnVisionSensorDescription(
         key=SENSOR_ACTION_MOW,
         translation_key=SENSOR_ACTION_MOW,
         icon="mdi:robot-mower",
+        device_class=SensorDeviceClass.ENUM,
+        options=ACTION_STATE_OPTIONS,
         value_fn=_action_state(SENSOR_ACTION_MOW),
         extra_fn=_action_extras(SENSOR_ACTION_MOW),
     ),
@@ -259,6 +324,8 @@ SENSORS: tuple[LawnVisionSensorDescription, ...] = (
         key=SENSOR_ACTION_WATER,
         translation_key=SENSOR_ACTION_WATER,
         icon="mdi:watering-can-outline",
+        device_class=SensorDeviceClass.ENUM,
+        options=ACTION_STATE_OPTIONS,
         value_fn=_action_state(SENSOR_ACTION_WATER),
         extra_fn=_action_extras(SENSOR_ACTION_WATER),
     ),
@@ -266,6 +333,8 @@ SENSORS: tuple[LawnVisionSensorDescription, ...] = (
         key=SENSOR_ACTION_FERTILIZE,
         translation_key=SENSOR_ACTION_FERTILIZE,
         icon="mdi:bottle-tonic-outline",
+        device_class=SensorDeviceClass.ENUM,
+        options=ACTION_STATE_OPTIONS,
         value_fn=_action_state(SENSOR_ACTION_FERTILIZE),
         extra_fn=_action_extras(SENSOR_ACTION_FERTILIZE),
     ),
@@ -273,6 +342,8 @@ SENSORS: tuple[LawnVisionSensorDescription, ...] = (
         key=SENSOR_ACTION_SCARIFY,
         translation_key=SENSOR_ACTION_SCARIFY,
         icon="mdi:rake",
+        device_class=SensorDeviceClass.ENUM,
+        options=ACTION_STATE_OPTIONS,
         value_fn=_action_state(SENSOR_ACTION_SCARIFY),
         extra_fn=_action_extras(SENSOR_ACTION_SCARIFY),
     ),
@@ -280,6 +351,8 @@ SENSORS: tuple[LawnVisionSensorDescription, ...] = (
         key=SENSOR_ACTION_AERATE,
         translation_key=SENSOR_ACTION_AERATE,
         icon="mdi:dots-grid",
+        device_class=SensorDeviceClass.ENUM,
+        options=ACTION_STATE_OPTIONS,
         value_fn=_action_state(SENSOR_ACTION_AERATE),
         extra_fn=_action_extras(SENSOR_ACTION_AERATE),
     ),
@@ -287,6 +360,8 @@ SENSORS: tuple[LawnVisionSensorDescription, ...] = (
         key=SENSOR_ACTION_OVERSEED,
         translation_key=SENSOR_ACTION_OVERSEED,
         icon="mdi:seed-outline",
+        device_class=SensorDeviceClass.ENUM,
+        options=ACTION_STATE_OPTIONS,
         value_fn=_action_state(SENSOR_ACTION_OVERSEED),
         extra_fn=_action_extras(SENSOR_ACTION_OVERSEED),
     ),
@@ -294,6 +369,8 @@ SENSORS: tuple[LawnVisionSensorDescription, ...] = (
         key=SENSOR_NEXT_ACTION,
         translation_key=SENSOR_NEXT_ACTION,
         icon="mdi:lightbulb-on-outline",
+        device_class=SensorDeviceClass.ENUM,
+        options=NEXT_ACTION_OPTIONS,
         value_fn=lambda data: data.get(SENSOR_NEXT_ACTION),
         extra_fn=_next_action_extras,
     ),

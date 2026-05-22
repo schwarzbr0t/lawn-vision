@@ -154,6 +154,15 @@
       "forecast_care_hint": {
         "name": "Prognose Pflegehinweis"
       },
+      "forecast_slot_24h": {
+        "name": "Prognose +24h"
+      },
+      "forecast_slot_48h": {
+        "name": "Prognose +48h"
+      },
+      "forecast_slot_3d": {
+        "name": "Prognose +3T"
+      },
       "action_mow": {
         "name": "Pflege: Maehen",
         "state": {

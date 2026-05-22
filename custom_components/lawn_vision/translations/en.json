@@ -154,6 +154,15 @@
       "forecast_care_hint": {
         "name": "Forecast care hint"
       },
+      "forecast_slot_24h": {
+        "name": "Forecast +24h"
+      },
+      "forecast_slot_48h": {
+        "name": "Forecast +48h"
+      },
+      "forecast_slot_3d": {
+        "name": "Forecast +3d"
+      },
       "action_mow": {
         "name": "Care: Mow",
         "state": {
