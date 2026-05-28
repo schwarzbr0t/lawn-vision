@@ -1,12 +1,13 @@
 {
   "domain": "lawn_vision",
   "name": "Lawn Vision",
+  "after_dependencies": ["frontend", "http"],
   "codeowners": ["@schwarzbr0t"],
   "config_flow": true,
-  "dependencies": ["frontend", "http"],
   "documentation": "https://github.com/schwarzbr0t/lawn-vision",
+  "integration_type": "hub",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/schwarzbr0t/lawn-vision/issues",
   "requirements": [],
-  "version": "0.6.1"
+  "version": "0.6.2"
 }
