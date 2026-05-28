@@ -77,6 +77,13 @@ def _schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
         )
     }
 
+    def _suggested(key: str) -> dict[str, Any]:
+        # HA's frontend rejects schemas where suggested_value is null for typed
+        # selectors, which surfaces in the UI as "config flow could not be
+        # loaded: 400". Only emit the description when we actually have a value.
+        value = defaults.get(key)
+        return {"description": {"suggested_value": value}} if value is not None else {}
+
     return vol.Schema(
         {
             vol.Optional(
@@ -91,12 +98,10 @@ def _schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
                 default=defaults.get(CONF_ESTIMATE_FROM_WEATHER, False),
             ): bool,
             vol.Optional(
-                CONF_LATITUDE,
-                description={"suggested_value": defaults.get(CONF_LATITUDE)},
+                CONF_LATITUDE, **_suggested(CONF_LATITUDE)
             ): NumberSelector(NumberSelectorConfig(min=-90, max=90, step=0.0001, mode="box")),
             vol.Optional(
-                CONF_LONGITUDE,
-                description={"suggested_value": defaults.get(CONF_LONGITUDE)},
+                CONF_LONGITUDE, **_suggested(CONF_LONGITUDE)
             ): NumberSelector(NumberSelectorConfig(min=-180, max=180, step=0.0001, mode="box")),
             vol.Optional(CONF_WEATHER_ENTITY, **entity_defaults[CONF_WEATHER_ENTITY]): EntitySelector(
                 EntitySelectorConfig(domain="weather")
@@ -197,11 +202,18 @@ class LawnVisionConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Create the options flow."""
-        return LawnVisionOptionsFlow()
+        return LawnVisionOptionsFlow(config_entry)
 
 
 class LawnVisionOptionsFlow(config_entries.OptionsFlow):
     """Handle Lawn Vision options."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        # Stored on a private attribute (not ``self.config_entry``) so we work
+        # both on HA < 2024.11 (which doesn't auto-inject ``config_entry`` and
+        # would raise AttributeError) and on newer HA (which warns/errors when
+        # the integration assigns ``self.config_entry`` itself).
+        self._entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -210,5 +222,5 @@ class LawnVisionOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        defaults = {**self.config_entry.data, **self.config_entry.options}
+        defaults = {**self._entry.data, **self._entry.options}
         return self.async_show_form(step_id="init", data_schema=_schema(defaults))
