@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 import logging
 from math import exp
 from typing import Any
@@ -100,6 +100,12 @@ from .actions import (
     _resolve_conflicts,
     _result,
 )
+from .agronomy import (
+    accumulate_gdd,
+    accumulate_gts,
+    gdd_base_temp,
+    vegetation_started,
+)
 from .helpers import (
     _average,
     _clamp,
@@ -108,6 +114,12 @@ from .helpers import (
     _forecast_rain_risk,
     _format_forecast_time,
     _round_or_none,
+)
+from .history import (
+    TemperatureHistoryStore,
+    bootstrap_history,
+    decode_daily_means,
+    refresh_recent,
 )
 from .translations import (
     DEFAULT_LANGUAGE,
@@ -173,6 +185,10 @@ class LawnVisionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._soil_temp_estimate: float | None = None
         self._soil_moisture_estimate: float | None = None
         self._last_update: datetime | None = None
+        self._history_store = TemperatureHistoryStore(hass, entry.entry_id)
+        self._history: list[tuple[date, float | None]] | None = None
+        self._history_year: int | None = None
+        self._history_source: str | None = None
 
     @property
     def config(self) -> dict[str, Any]:
@@ -256,6 +272,46 @@ class LawnVisionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     moisture_estimated = True
             self._last_update = now
 
+        grass_type = config.get(CONF_GRASS_TYPE, DEFAULT_GRASS_TYPE)
+        today = dt_util.now().date()
+        latitude_for_history = config.get(CONF_LATITUDE)
+        longitude_for_history = config.get(CONF_LONGITUDE)
+        if latitude_for_history is None:
+            latitude_for_history = self.hass.config.latitude
+        if longitude_for_history is None:
+            longitude_for_history = self.hass.config.longitude
+        history_pairs = await self._async_ensure_history(
+            today, latitude_for_history, longitude_for_history
+        )
+
+        gts_override = self._number_from_entity(config.get(CONF_GTS_ENTITY))
+        gdd_override = self._number_from_entity(config.get(CONF_GDD_ENTITY))
+
+        gts_pairs = self._history_pairs_with_today(
+            history_pairs, today, mean_daily_temp
+        )
+        gts_value: float | None
+        gdd_value: float | None
+        gts_source = "entity" if gts_override is not None else (
+            self._history_source or "unavailable"
+        )
+        gdd_source = "entity" if gdd_override is not None else (
+            self._history_source or "unavailable"
+        )
+        if gts_override is not None:
+            gts_value = gts_override
+        elif gts_pairs:
+            gts_value = round(accumulate_gts(gts_pairs), 1)
+        else:
+            gts_value = None
+        if gdd_override is not None:
+            gdd_value = gdd_override
+        elif gts_pairs:
+            gdd_value = round(accumulate_gdd(gts_pairs, grass_type), 1)
+        else:
+            gdd_value = None
+        days_counted = sum(1 for _day, temp in gts_pairs if temp is not None)
+
         inputs = LawnInputs(
             temperature_c=air_temp,
             mean_daily_temperature_c=mean_daily_temp,
@@ -272,10 +328,10 @@ class LawnVisionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 config.get(CONF_MOISTURE_30CM_ENTITY)
             ),
             rain_mm=rain,
-            grassland_temperature_sum=self._number_from_entity(config.get(CONF_GTS_ENTITY)),
-            growing_degree_days=self._number_from_entity(config.get(CONF_GDD_ENTITY)),
+            grassland_temperature_sum=gts_value,
+            growing_degree_days=gdd_value,
             condition=condition,
-            grass_type=config.get(CONF_GRASS_TYPE, DEFAULT_GRASS_TYPE),
+            grass_type=grass_type,
             area_m2=float(config.get(CONF_AREA_M2, DEFAULT_AREA_M2)),
             soil_temperature_estimated=soil_temp_estimated,
             moisture_estimated=moisture_estimated,
@@ -312,6 +368,12 @@ class LawnVisionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "soil_temperature_estimated": inputs.soil_temperature_estimated,
             "moisture_estimated": inputs.moisture_estimated,
             "language": lang,
+            "gts_source": gts_source,
+            "gdd_source": gdd_source,
+            "gts_days_counted": days_counted,
+            "gdd_days_counted": days_counted,
+            "gdd_base_temp_c": gdd_base_temp(grass_type),
+            "vegetation_started": vegetation_started(gts_value),
         }
         metrics["name"] = config.get(CONF_NAME, DEFAULT_NAME)
         return metrics
@@ -405,7 +467,80 @@ class LawnVisionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         forecast = entity_response.get("forecast") if isinstance(entity_response, dict) else None
         return forecast if isinstance(forecast, list) else []
 
+    async def _async_ensure_history(
+        self,
+        today: date,
+        latitude: float | None,
+        longitude: float | None,
+    ) -> list[tuple[date, float | None]]:
+        """Load, bootstrap, or top up the persisted daily-mean history."""
+        if self._history is None:
+            payload = await self._history_store.async_load()
+            stored_year = payload.get("year") if isinstance(payload, dict) else None
+            self._history = decode_daily_means(payload)
+            self._history_year = stored_year if isinstance(stored_year, int) else None
+            self._history_source = (
+                payload.get("source") if isinstance(payload, dict) else None
+            )
 
+        if self._history_year != today.year:
+            # Year rolled over (or first run) → drop cache and re-bootstrap.
+            self._history = []
+            self._history_year = today.year
+            self._history_source = None
+
+        needs_bootstrap = not self._history
+        can_fetch = latitude is not None and longitude is not None
+
+        if needs_bootstrap and can_fetch:
+            try:
+                merged, source = await bootstrap_history(
+                    self.hass, float(latitude), float(longitude), today
+                )
+            except Exception:  # noqa: BLE001
+                LOGGER.exception("Lawn Vision history bootstrap failed")
+                merged, source = [], "unavailable"
+            self._history = merged
+            self._history_source = source
+            if merged:
+                await self._history_store.async_save(
+                    today.year, merged, source
+                )
+        elif self._history and can_fetch:
+            try:
+                merged, changed = await refresh_recent(
+                    self.hass,
+                    float(latitude),
+                    float(longitude),
+                    self._history,
+                    today,
+                )
+            except Exception:  # noqa: BLE001
+                LOGGER.exception("Lawn Vision history refresh failed")
+                merged, changed = self._history, False
+            if changed:
+                self._history = merged
+                if self._history_source in (None, "unavailable"):
+                    self._history_source = "open_meteo_forecast"
+                await self._history_store.async_save(
+                    today.year, merged, self._history_source
+                )
+
+        return list(self._history or [])
+
+    def _history_pairs_with_today(
+        self,
+        history: list[tuple[date, float | None]],
+        today: date,
+        today_mean: float | None,
+    ) -> list[tuple[date, float | None]]:
+        """Return history augmented with today's mean (if available and unseen)."""
+        if not history and today_mean is None:
+            return []
+        already_has_today = any(day == today for day, _ in history)
+        if already_has_today or today_mean is None:
+            return list(history)
+        return list(history) + [(today, float(today_mean))]
 
 
 def estimate_soil_temperature(
@@ -505,8 +640,6 @@ def calculate_metrics(
         forecast_payload, inputs, mowing, stress, water_need, lang
     )
     growing_degree_days = inputs.growing_degree_days
-    if growing_degree_days is None:
-        growing_degree_days = _growing_degree_days(mean_daily_temp, inputs.grass_type)
 
     actions = _care_actions(
         inputs=inputs,

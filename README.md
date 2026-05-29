@@ -87,8 +87,10 @@ Optional but recommended:
 - Soil moisture sensor
 - Soil temperature sensor
 - Mean daily temperature sensor
-- Grassland temperature sum sensor
-- Growing Degree Days sensor
+- Grassland temperature sum sensor (optional override; otherwise calculated
+  from Open-Meteo)
+- Growing Degree Days sensor (optional override; otherwise calculated from
+  Open-Meteo)
 - Soil moisture sensors for 10 cm, 20 cm and 30 cm depth
 - Rain sensor
 - Lawn area
@@ -109,6 +111,27 @@ options flow. The integration then derives:
 Estimated values are clamped to realistic bands and exposed with an
 `estimated: true` attribute on the corresponding sensor. A real sensor
 or an Open-Meteo soil value always wins over the estimate.
+
+### Grassland temperature sum (GTS) and Growing Degree Days (GDD)
+
+Both metrics are accumulated internally from daily mean temperatures and
+reset on January 1st each year:
+
+- **GTS** follows the DWD formula: positive daily mean × monthly weight
+  (Jan ×0.5, Feb ×0.75, Mar+ ×1.0). The 200 K threshold marks sustained
+  vegetation onset and is surfaced as the `vegetation_started` attribute.
+- **GDD** uses a grass-type-aware base temperature (cool-season 5.5 °C,
+  warm-season 10 °C). The base is exposed via the `base_temp_c` attribute.
+
+On the first run after upgrade the integration bootstraps the current
+year from the Open-Meteo Archive API and tops it up with the forecast
+endpoint's `past_days` window. Subsequent ticks only refresh the trailing
+days. Both sensors expose `source`, `days_counted` and `calculated`
+attributes so dashboards can show data provenance.
+
+Setting the optional **Grassland temperature sum** or **Growing Degree
+Days** entity in the config flow turns it into a manual override — the
+external value then wins.
 
 ### Languages
 

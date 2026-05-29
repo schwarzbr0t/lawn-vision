@@ -16,12 +16,14 @@ for _mod in (
     "homeassistant.exceptions",
     "homeassistant.helpers",
     "homeassistant.helpers.aiohttp_client",
+    "homeassistant.helpers.storage",
     "homeassistant.helpers.update_coordinator",
     "homeassistant.util",
     "homeassistant.util.dt",
 ):
     sys.modules.setdefault(_mod, MagicMock())
 
+from custom_components.lawn_vision import agronomy as ag  # noqa: E402
 from custom_components.lawn_vision import coordinator as cc  # noqa: E402
 from custom_components.lawn_vision import weather_source as ws  # noqa: E402
 
@@ -602,6 +604,102 @@ class TestLocalization(unittest.TestCase):
         self.assertIn(result["recommendation_code"], (
             "mowing_window", "active_growth", "waking_up", "slow_growth"
         ))
+
+
+class TestAgronomy(unittest.TestCase):
+    def test_gts_weight_january_february_march(self):
+        self.assertEqual(ag.gts_weight(1), 0.5)
+        self.assertEqual(ag.gts_weight(2), 0.75)
+        self.assertEqual(ag.gts_weight(3), 1.0)
+        self.assertEqual(ag.gts_weight(7), 1.0)
+
+    def test_gts_day_clamps_negative_and_none(self):
+        self.assertEqual(ag.gts_day(-3.0, 1), 0.0)
+        self.assertEqual(ag.gts_day(None, 3), 0.0)
+        # 10 °C in February → 10 × 0.75 = 7.5 K
+        self.assertAlmostEqual(ag.gts_day(10.0, 2), 7.5)
+
+    def test_gdd_base_temp_by_grass_type(self):
+        self.assertEqual(ag.gdd_base_temp("cool_season"), 5.5)
+        self.assertEqual(ag.gdd_base_temp("warm_season"), 10.0)
+        # Unknown grass type falls back to cool-season base.
+        self.assertEqual(ag.gdd_base_temp("mystery"), 5.5)
+
+    def test_gdd_day_below_base_returns_zero(self):
+        self.assertEqual(ag.gdd_day(4.0, "cool_season"), 0.0)
+        self.assertEqual(ag.gdd_day(None, "cool_season"), 0.0)
+        # 20 °C cool-season → 20 − 5.5 = 14.5
+        self.assertAlmostEqual(ag.gdd_day(20.0, "cool_season"), 14.5)
+        # 20 °C warm-season → 20 − 10 = 10
+        self.assertAlmostEqual(ag.gdd_day(20.0, "warm_season"), 10.0)
+
+    def test_accumulate_gts_known_example(self):
+        # Jan: 10 °C × 0.5 = 5, Feb: 8 °C × 0.75 = 6, Mar: 12 °C × 1 = 12 → 23
+        days = [
+            (datetime(2026, 1, 15).date(), 10.0),
+            (datetime(2026, 2, 10).date(), 8.0),
+            (datetime(2026, 3, 5).date(), 12.0),
+        ]
+        self.assertAlmostEqual(ag.accumulate_gts(days), 23.0)
+
+    def test_accumulate_gts_skips_none(self):
+        days = [
+            (datetime(2026, 3, 1).date(), None),
+            (datetime(2026, 3, 2).date(), 10.0),
+        ]
+        self.assertAlmostEqual(ag.accumulate_gts(days), 10.0)
+
+    def test_accumulate_gdd_uses_grass_type_base(self):
+        days = [
+            (datetime(2026, 5, 1).date(), 20.0),
+            (datetime(2026, 5, 2).date(), 15.0),
+        ]
+        # cool: (20-5.5) + (15-5.5) = 14.5 + 9.5 = 24
+        self.assertAlmostEqual(ag.accumulate_gdd(days, "cool_season"), 24.0)
+        # warm: (20-10) + (15-10) = 10 + 5 = 15
+        self.assertAlmostEqual(ag.accumulate_gdd(days, "warm_season"), 15.0)
+
+    def test_year_bounds_returns_january_first(self):
+        today = datetime(2026, 5, 29).date()
+        start, end = ag.year_bounds(today)
+        self.assertEqual(start, datetime(2026, 1, 1).date())
+        self.assertEqual(end, today)
+
+    def test_vegetation_started_threshold(self):
+        self.assertFalse(ag.vegetation_started(None))
+        self.assertFalse(ag.vegetation_started(199.9))
+        self.assertTrue(ag.vegetation_started(200.0))
+        self.assertTrue(ag.vegetation_started(450.0))
+
+    def test_merge_recent_overrides_archive(self):
+        archive = [
+            (datetime(2026, 1, 1).date(), 1.0),
+            (datetime(2026, 1, 2).date(), 2.0),
+            (datetime(2026, 1, 3).date(), 3.0),
+        ]
+        recent = [
+            (datetime(2026, 1, 3).date(), 9.9),  # overrides archive
+            (datetime(2026, 1, 4).date(), 4.0),
+        ]
+        merged = ag.merge_daily_means(archive, recent)
+        self.assertEqual(
+            merged,
+            [
+                (datetime(2026, 1, 1).date(), 1.0),
+                (datetime(2026, 1, 2).date(), 2.0),
+                (datetime(2026, 1, 3).date(), 9.9),
+                (datetime(2026, 1, 4).date(), 4.0),
+            ],
+        )
+
+    def test_merge_preserves_gaps(self):
+        archive = [(datetime(2026, 1, 1).date(), 1.0)]
+        recent = [(datetime(2026, 1, 5).date(), 5.0)]
+        merged = ag.merge_daily_means(archive, recent)
+        # No interpolation — only the two real days are kept.
+        self.assertEqual(len(merged), 2)
+        self.assertEqual(merged[0][0], datetime(2026, 1, 1).date())
+        self.assertEqual(merged[1][0], datetime(2026, 1, 5).date())
 
 
 if __name__ == "__main__":

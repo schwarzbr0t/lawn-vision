@@ -173,6 +173,15 @@ SENSORS: tuple[LawnVisionSensorDescription, ...] = (
         native_unit_of_measurement="K",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: data.get(SENSOR_GRASSLAND_TEMPERATURE_SUM),
+        extra_fn=lambda data: {
+            "source": data.get("inputs", {}).get("gts_source"),
+            "days_counted": data.get("inputs", {}).get("gts_days_counted"),
+            "threshold_k": 200,
+            "vegetation_started": bool(
+                data.get("inputs", {}).get("vegetation_started")
+            ),
+            "calculated": data.get("inputs", {}).get("gts_source") != "entity",
+        },
     ),
     LawnVisionSensorDescription(
         key=SENSOR_GROWING_DEGREE_DAYS,
@@ -181,6 +190,12 @@ SENSORS: tuple[LawnVisionSensorDescription, ...] = (
         native_unit_of_measurement="GDD",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: data.get(SENSOR_GROWING_DEGREE_DAYS),
+        extra_fn=lambda data: {
+            "source": data.get("inputs", {}).get("gdd_source"),
+            "days_counted": data.get("inputs", {}).get("gdd_days_counted"),
+            "base_temp_c": data.get("inputs", {}).get("gdd_base_temp_c"),
+            "calculated": data.get("inputs", {}).get("gdd_source") != "entity",
+        },
     ),
     LawnVisionSensorDescription(
         key=SENSOR_MOISTURE_10CM,

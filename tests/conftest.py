@@ -12,6 +12,7 @@ _HA_MODULES = (
     "homeassistant.core",
     "homeassistant.exceptions",
     "homeassistant.helpers",
+    "homeassistant.helpers.storage",
     "homeassistant.helpers.update_coordinator",
     "homeassistant.util",
     "homeassistant.util.dt",

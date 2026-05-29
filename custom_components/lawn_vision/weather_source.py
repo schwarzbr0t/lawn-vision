@@ -8,6 +8,7 @@ Attribution: https://open-meteo.com/
 from __future__ import annotations
 
 import logging
+from datetime import date
 from typing import TYPE_CHECKING, Any
 
 import aiohttp
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+OPEN_METEO_ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 OPEN_METEO_TIMEOUT_SECONDS = 15
 
 OPEN_METEO_PARAMS = {
@@ -132,6 +134,88 @@ def map_open_meteo(data: dict[str, Any]) -> dict[str, Any]:
             "daily": daily_items,
         },
     }
+
+
+async def fetch_open_meteo_archive(
+    hass: "HomeAssistant",
+    latitude: float,
+    longitude: float,
+    start: date,
+    end: date,
+) -> list[tuple[date, float | None]]:
+    """Fetch daily mean temperatures from the Open-Meteo archive endpoint."""
+    if end < start:
+        return []
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "start_date": start.isoformat(),
+        "end_date": end.isoformat(),
+        "daily": "temperature_2m_mean",
+        "timezone": "auto",
+    }
+    return await _fetch_daily_means(hass, OPEN_METEO_ARCHIVE_URL, params)
+
+
+async def fetch_open_meteo_past(
+    hass: "HomeAssistant",
+    latitude: float,
+    longitude: float,
+    past_days: int,
+) -> list[tuple[date, float | None]]:
+    """Fetch the last N days of daily mean temperature from the forecast endpoint."""
+    if past_days <= 0:
+        return []
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "daily": "temperature_2m_mean",
+        "past_days": min(past_days, 92),
+        "forecast_days": 1,
+        "timezone": "auto",
+    }
+    return await _fetch_daily_means(hass, OPEN_METEO_URL, params)
+
+
+async def _fetch_daily_means(
+    hass: "HomeAssistant", url: str, params: dict[str, Any]
+) -> list[tuple[date, float | None]]:
+    """Shared GET + parse for Open-Meteo daily mean responses."""
+    session = async_get_clientsession(hass)
+    try:
+        async with session.get(
+            url,
+            params=params,
+            timeout=aiohttp.ClientTimeout(total=OPEN_METEO_TIMEOUT_SECONDS),
+        ) as resp:
+            if resp.status != 200:
+                LOGGER.warning("Open-Meteo %s returned HTTP %s", url, resp.status)
+                return []
+            data = await resp.json()
+    except (aiohttp.ClientError, TimeoutError) as err:
+        LOGGER.warning("Open-Meteo %s fetch failed: %s", url, err)
+        return []
+    return parse_daily_means(data)
+
+
+def parse_daily_means(data: dict[str, Any]) -> list[tuple[date, float | None]]:
+    """Convert an Open-Meteo daily payload to a list of (date, mean) pairs (pure)."""
+    daily = data.get("daily") or {}
+    times = daily.get("time") or []
+    means = daily.get("temperature_2m_mean") or []
+    result: list[tuple[date, float | None]] = []
+    for index, iso in enumerate(times):
+        try:
+            day = date.fromisoformat(str(iso))
+        except (TypeError, ValueError):
+            continue
+        raw = means[index] if 0 <= index < len(means) else None
+        try:
+            value = float(raw) if raw is not None else None
+        except (TypeError, ValueError):
+            value = None
+        result.append((day, value))
+    return result
 
 
 def _at(payload: dict[str, Any], key: str, index: int) -> Any:
