@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import voluptuous as vol
@@ -11,8 +12,6 @@ from homeassistant.const import CONF_NAME
 from homeassistant.helpers.selector import (
     EntitySelector,
     EntitySelectorConfig,
-    NumberSelector,
-    NumberSelectorConfig,
     SelectSelector,
     SelectSelectorConfig,
 )
@@ -30,15 +29,15 @@ from .const import (
     CONF_LAST_OVERSEED_ENTITY,
     CONF_LAST_SCARIFY_ENTITY,
     CONF_LAST_WATER_ENTITY,
+    CONF_LATITUDE,
+    CONF_LONGITUDE,
     CONF_MEAN_DAILY_TEMPERATURE_ENTITY,
-    CONF_MOISTURE_ENTITY,
     CONF_MOISTURE_10CM_ENTITY,
     CONF_MOISTURE_20CM_ENTITY,
     CONF_MOISTURE_30CM_ENTITY,
+    CONF_MOISTURE_ENTITY,
     CONF_RAIN_ENTITY,
     CONF_SOIL_TEMPERATURE_ENTITY,
-    CONF_LATITUDE,
-    CONF_LONGITUDE,
     CONF_TEMPERATURE_ENTITY,
     CONF_USE_OPEN_METEO,
     CONF_WEATHER_ENTITY,
@@ -49,133 +48,81 @@ from .const import (
     GRASS_TYPES,
 )
 
+LOGGER = logging.getLogger(__name__)
+
+# (config-key, entity-domain) for every optional entity selector.
+_ENTITY_FIELDS: tuple[tuple[str, str], ...] = (
+    (CONF_WEATHER_ENTITY, "weather"),
+    (CONF_TEMPERATURE_ENTITY, "sensor"),
+    (CONF_MEAN_DAILY_TEMPERATURE_ENTITY, "sensor"),
+    (CONF_SOIL_TEMPERATURE_ENTITY, "sensor"),
+    (CONF_HUMIDITY_ENTITY, "sensor"),
+    (CONF_MOISTURE_ENTITY, "sensor"),
+    (CONF_MOISTURE_10CM_ENTITY, "sensor"),
+    (CONF_MOISTURE_20CM_ENTITY, "sensor"),
+    (CONF_MOISTURE_30CM_ENTITY, "sensor"),
+    (CONF_RAIN_ENTITY, "sensor"),
+    (CONF_GTS_ENTITY, "sensor"),
+    (CONF_GDD_ENTITY, "sensor"),
+    (CONF_LAST_MOW_ENTITY, "input_datetime"),
+    (CONF_LAST_WATER_ENTITY, "input_datetime"),
+    (CONF_LAST_FERTILIZE_ENTITY, "input_datetime"),
+    (CONF_LAST_SCARIFY_ENTITY, "input_datetime"),
+    (CONF_LAST_AERATE_ENTITY, "input_datetime"),
+    (CONF_LAST_OVERSEED_ENTITY, "input_datetime"),
+)
+
+
+def _clean_defaults(defaults: dict[str, Any] | None) -> dict[str, Any]:
+    """Strip ``None`` and empty strings — HA's frontend rejects either as a
+    selector default with a generic ``400: Bad Request``."""
+    if not defaults:
+        return {}
+    return {k: v for k, v in defaults.items() if v not in (None, "")}
+
+
+def _opt(key: str, defaults: dict[str, Any]) -> vol.Optional:
+    """``vol.Optional`` with a default *only* when we actually have a value."""
+    if key in defaults:
+        return vol.Optional(key, default=defaults[key])
+    return vol.Optional(key)
+
 
 def _schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
-    """Return the setup/options schema."""
-    defaults = defaults or {}
-    entity_defaults = {
-        key: {"default": defaults[key]} if defaults.get(key) else {}
-        for key in (
-            CONF_WEATHER_ENTITY,
-            CONF_TEMPERATURE_ENTITY,
-            CONF_MEAN_DAILY_TEMPERATURE_ENTITY,
-            CONF_SOIL_TEMPERATURE_ENTITY,
-            CONF_HUMIDITY_ENTITY,
-            CONF_MOISTURE_ENTITY,
-            CONF_MOISTURE_10CM_ENTITY,
-            CONF_MOISTURE_20CM_ENTITY,
-            CONF_MOISTURE_30CM_ENTITY,
-            CONF_RAIN_ENTITY,
-            CONF_GTS_ENTITY,
-            CONF_GDD_ENTITY,
-            CONF_LAST_MOW_ENTITY,
-            CONF_LAST_WATER_ENTITY,
-            CONF_LAST_FERTILIZE_ENTITY,
-            CONF_LAST_SCARIFY_ENTITY,
-            CONF_LAST_AERATE_ENTITY,
-            CONF_LAST_OVERSEED_ENTITY,
-        )
+    """Return the setup / options form schema."""
+    d = _clean_defaults(defaults)
+
+    fields: dict[Any, Any] = {
+        vol.Optional(CONF_NAME, default=d.get(CONF_NAME, DEFAULT_NAME)): str,
+        vol.Optional(
+            CONF_USE_OPEN_METEO, default=d.get(CONF_USE_OPEN_METEO, False)
+        ): bool,
+        vol.Optional(
+            CONF_ESTIMATE_FROM_WEATHER,
+            default=d.get(CONF_ESTIMATE_FROM_WEATHER, False),
+        ): bool,
+        # Lat/Lon as plain coerced floats. NumberSelector with a float step
+        # historically tripped HA's schema serializer and showed up as a bare
+        # "400: Bad Request" in the frontend — keep this dead simple.
+        _opt(CONF_LATITUDE, d): vol.Coerce(float),
+        _opt(CONF_LONGITUDE, d): vol.Coerce(float),
+        vol.Optional(
+            CONF_AREA_M2, default=d.get(CONF_AREA_M2, DEFAULT_AREA_M2)
+        ): vol.All(vol.Coerce(int), vol.Range(min=1, max=5000)),
+        vol.Optional(
+            CONF_GRASS_TYPE,
+            default=d.get(CONF_GRASS_TYPE, DEFAULT_GRASS_TYPE),
+        ): SelectSelector(
+            SelectSelectorConfig(
+                options=list(GRASS_TYPES), translation_key=CONF_GRASS_TYPE
+            )
+        ),
     }
 
-    def _suggested(key: str) -> dict[str, Any]:
-        # HA's frontend rejects schemas where suggested_value is null for typed
-        # selectors, which surfaces in the UI as "config flow could not be
-        # loaded: 400". Only emit the description when we actually have a value.
-        value = defaults.get(key)
-        return {"description": {"suggested_value": value}} if value is not None else {}
+    for key, domain in _ENTITY_FIELDS:
+        fields[_opt(key, d)] = EntitySelector(EntitySelectorConfig(domain=domain))
 
-    return vol.Schema(
-        {
-            vol.Optional(
-                CONF_NAME, default=defaults.get(CONF_NAME, DEFAULT_NAME)
-            ): str,
-            vol.Optional(
-                CONF_USE_OPEN_METEO,
-                default=defaults.get(CONF_USE_OPEN_METEO, False),
-            ): bool,
-            vol.Optional(
-                CONF_ESTIMATE_FROM_WEATHER,
-                default=defaults.get(CONF_ESTIMATE_FROM_WEATHER, False),
-            ): bool,
-            vol.Optional(
-                CONF_LATITUDE, **_suggested(CONF_LATITUDE)
-            ): NumberSelector(NumberSelectorConfig(min=-90, max=90, step=0.0001, mode="box")),
-            vol.Optional(
-                CONF_LONGITUDE, **_suggested(CONF_LONGITUDE)
-            ): NumberSelector(NumberSelectorConfig(min=-180, max=180, step=0.0001, mode="box")),
-            vol.Optional(CONF_WEATHER_ENTITY, **entity_defaults[CONF_WEATHER_ENTITY]): EntitySelector(
-                EntitySelectorConfig(domain="weather")
-            ),
-            vol.Optional(CONF_TEMPERATURE_ENTITY, **entity_defaults[CONF_TEMPERATURE_ENTITY]): EntitySelector(
-                EntitySelectorConfig(domain="sensor")
-            ),
-            vol.Optional(
-                CONF_MEAN_DAILY_TEMPERATURE_ENTITY,
-                **entity_defaults[CONF_MEAN_DAILY_TEMPERATURE_ENTITY],
-            ): EntitySelector(
-                EntitySelectorConfig(domain="sensor")
-            ),
-            vol.Optional(
-                CONF_SOIL_TEMPERATURE_ENTITY,
-                **entity_defaults[CONF_SOIL_TEMPERATURE_ENTITY],
-            ): EntitySelector(
-                EntitySelectorConfig(domain="sensor")
-            ),
-            vol.Optional(CONF_HUMIDITY_ENTITY, **entity_defaults[CONF_HUMIDITY_ENTITY]): EntitySelector(
-                EntitySelectorConfig(domain="sensor")
-            ),
-            vol.Optional(CONF_MOISTURE_ENTITY, **entity_defaults[CONF_MOISTURE_ENTITY]): EntitySelector(
-                EntitySelectorConfig(domain="sensor")
-            ),
-            vol.Optional(CONF_MOISTURE_10CM_ENTITY, **entity_defaults[CONF_MOISTURE_10CM_ENTITY]): EntitySelector(
-                EntitySelectorConfig(domain="sensor")
-            ),
-            vol.Optional(CONF_MOISTURE_20CM_ENTITY, **entity_defaults[CONF_MOISTURE_20CM_ENTITY]): EntitySelector(
-                EntitySelectorConfig(domain="sensor")
-            ),
-            vol.Optional(CONF_MOISTURE_30CM_ENTITY, **entity_defaults[CONF_MOISTURE_30CM_ENTITY]): EntitySelector(
-                EntitySelectorConfig(domain="sensor")
-            ),
-            vol.Optional(CONF_RAIN_ENTITY, **entity_defaults[CONF_RAIN_ENTITY]): EntitySelector(
-                EntitySelectorConfig(domain="sensor")
-            ),
-            vol.Optional(CONF_GTS_ENTITY, **entity_defaults[CONF_GTS_ENTITY]): EntitySelector(
-                EntitySelectorConfig(domain="sensor")
-            ),
-            vol.Optional(CONF_GDD_ENTITY, **entity_defaults[CONF_GDD_ENTITY]): EntitySelector(
-                EntitySelectorConfig(domain="sensor")
-            ),
-            vol.Optional(
-                CONF_AREA_M2, default=defaults.get(CONF_AREA_M2, DEFAULT_AREA_M2)
-            ): NumberSelector(
-                NumberSelectorConfig(min=1, max=5000, step=1, mode="box")
-            ),
-            vol.Optional(
-                CONF_GRASS_TYPE,
-                default=defaults.get(CONF_GRASS_TYPE, DEFAULT_GRASS_TYPE),
-            ): SelectSelector(
-                SelectSelectorConfig(options=GRASS_TYPES, translation_key=CONF_GRASS_TYPE)
-            ),
-            vol.Optional(CONF_LAST_MOW_ENTITY, **entity_defaults[CONF_LAST_MOW_ENTITY]): EntitySelector(
-                EntitySelectorConfig(domain="input_datetime")
-            ),
-            vol.Optional(CONF_LAST_WATER_ENTITY, **entity_defaults[CONF_LAST_WATER_ENTITY]): EntitySelector(
-                EntitySelectorConfig(domain="input_datetime")
-            ),
-            vol.Optional(CONF_LAST_FERTILIZE_ENTITY, **entity_defaults[CONF_LAST_FERTILIZE_ENTITY]): EntitySelector(
-                EntitySelectorConfig(domain="input_datetime")
-            ),
-            vol.Optional(CONF_LAST_SCARIFY_ENTITY, **entity_defaults[CONF_LAST_SCARIFY_ENTITY]): EntitySelector(
-                EntitySelectorConfig(domain="input_datetime")
-            ),
-            vol.Optional(CONF_LAST_AERATE_ENTITY, **entity_defaults[CONF_LAST_AERATE_ENTITY]): EntitySelector(
-                EntitySelectorConfig(domain="input_datetime")
-            ),
-            vol.Optional(CONF_LAST_OVERSEED_ENTITY, **entity_defaults[CONF_LAST_OVERSEED_ENTITY]): EntitySelector(
-                EntitySelectorConfig(domain="input_datetime")
-            ),
-        }
-    )
+    return vol.Schema(fields)
 
 
 class LawnVisionConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -209,10 +156,8 @@ class LawnVisionOptionsFlow(config_entries.OptionsFlow):
     """Handle Lawn Vision options."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        # Stored on a private attribute (not ``self.config_entry``) so we work
-        # both on HA < 2024.11 (which doesn't auto-inject ``config_entry`` and
-        # would raise AttributeError) and on newer HA (which warns/errors when
-        # the integration assigns ``self.config_entry`` itself).
+        # Private attribute so we work on HA < 2024.11 (no auto-inject) *and*
+        # on newer HA (deprecation warning when assigning ``self.config_entry``).
         self._entry = config_entry
 
     async def async_step_init(
