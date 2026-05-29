@@ -120,6 +120,11 @@ include stable machine-code attributes (`recommendation_code`,
 `reason_code`, `next_window_code`, …) so the Lovelace card and
 automations can localize them independently.
 
+Note: the bundled Lovelace card currently renders its static UI labels
+(section titles, button copy, kicker text) in German only. Free-text
+sensor states forwarded from the integration still follow the active HA
+language. Adding an English UI pass to the card is tracked separately.
+
 For the care guide, the integration ships native `date` entities that
 track when each task was last performed:
 
@@ -154,7 +159,10 @@ needed.**
 
 A standalone external card repository
 ([schwarzbr0t/lawn-vision-card](https://github.com/schwarzbr0t/lawn-vision-card))
-is still available for users who prefer it; it ships an older skin.
+remains available as a HACS Lovelace plugin for users who installed it
+before the card moved in-tree. It tracks the bundled card 1:1 and
+requires Lawn Vision integration **≥ 0.6.0** (forecast slot sensors and
+the `reasons` attribute on the recommendation sensor).
 
 Restart Home Assistant after installing the integration, add the Lawn
 Vision integration via the UI, then add a manual dashboard card:
@@ -179,6 +187,8 @@ entity_recommendation: sensor.lawn_vision_recommendation
 entity_forecast_slot_24h: sensor.lawn_vision_forecast_slot_24h
 entity_forecast_slot_48h: sensor.lawn_vision_forecast_slot_48h
 entity_forecast_slot_3d: sensor.lawn_vision_forecast_slot_3d
+entity_forecast_rain_risk: sensor.lawn_vision_forecast_rain_risk
+entity_forecast_water_need: sensor.lawn_vision_forecast_water_need
 ```
 
 All `entity_*` keys are optional and default to the standard
